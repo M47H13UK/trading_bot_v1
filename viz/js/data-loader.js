@@ -4,7 +4,7 @@ const cache = {};
 export async function loadTicker(ticker) {
   if (cache[ticker]) return cache[ticker];
 
-  const url = `../test_data/${ticker}.csv`;
+  const url = `../test_data/daily/${ticker}.csv`;
   const resp = await fetch(url);
   if (!resp.ok) throw new Error(`Failed to fetch ${url}: ${resp.status}`);
   const text = await resp.text();

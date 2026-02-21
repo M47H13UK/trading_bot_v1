@@ -1,6 +1,8 @@
 // Step-through state machine: play/pause, step forward/back
 import { WARMUP } from './constants.js';
 
+const LS_SPEED_KEY = 'peakshaver_speed';
+
 export class StepController {
   constructor(onStep) {
     this.onStep = onStep;  // callback(currentIndex)
@@ -8,7 +10,6 @@ export class StepController {
     this.maxIndex = WARMUP;
     this.playing = false;
     this.timer = null;
-    this.speed = 50; // ms per step
 
     this.els = {
       stepBack: document.getElementById('btn-step-back'),
@@ -20,6 +21,13 @@ export class StepController {
       total: document.getElementById('step-total'),
     };
 
+    // Restore speed from localStorage
+    const saved = localStorage.getItem(LS_SPEED_KEY);
+    if (saved != null) {
+      this.els.speed.value = saved;
+    }
+    this.speed = 201 - parseInt(this.els.speed.value);
+
     this.bind();
   }
 
@@ -28,7 +36,9 @@ export class StepController {
     this.els.stepFwd.addEventListener('click', () => this.step(this.getStepSize()));
     this.els.play.addEventListener('click', () => this.togglePlay());
     this.els.speed.addEventListener('input', () => {
-      this.speed = 201 - parseInt(this.els.speed.value); // invert: higher slider = faster
+      const val = parseInt(this.els.speed.value);
+      this.speed = 201 - val;
+      localStorage.setItem(LS_SPEED_KEY, val);
       if (this.playing) { this.stopTimer(); this.startTimer(); }
     });
     // Keyboard shortcuts

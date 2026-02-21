@@ -15,6 +15,7 @@ export class ChartManager {
     this.series = {};
     this.tradeMarkers = [];
     this.onTradeClick = null;
+    this.lastEndIndex = -1; // track for incremental updates
   }
 
   init() {
@@ -57,6 +58,13 @@ export class ChartManager {
       const trade = this.tradeMarkers.find(t => t.time === param.time);
       if (trade) this.onTradeClick(trade);
     });
+
+    // Pointer cursor when hovering over a marker candle
+    chart.subscribeCrosshairMove((param) => {
+      if (!param.time) { el.style.cursor = ''; return; }
+      const hit = this.tradeMarkers.some(t => t.time === param.time);
+      el.style.cursor = hit ? 'pointer' : '';
+    });
   }
 
   createRsiChart() {
@@ -67,7 +75,6 @@ export class ChartManager {
     });
     const line = chart.addLineSeries({ color: COLORS.rsiLine, lineWidth: 2, title: 'RSI(14)' });
 
-    // Horizontal threshold lines via baseline series workaround — use line + priceLines
     line.createPriceLine({ price: 85, color: COLORS.rsiHigh, lineWidth: 1, lineStyle: 2, axisLabelVisible: false });
     line.createPriceLine({ price: 75, color: COLORS.rsiMid, lineWidth: 1, lineStyle: 2, axisLabelVisible: false });
     line.createPriceLine({ price: 30, color: COLORS.rsiLow, lineWidth: 1, lineStyle: 2, axisLabelVisible: false });
@@ -128,7 +135,7 @@ export class ChartManager {
         keys.forEach(k2 => {
           if (k1 !== k2) {
             this.charts[k2].setCrosshairPosition(
-              undefined,  // price — let each chart determine its own
+              undefined,
               param.time,
               this.getFirstSeries(k2)
             );
@@ -147,8 +154,9 @@ export class ChartManager {
     }
   }
 
-  // Set data for all panes up to endIndex
+  // Full data set — used on load, step backward, or jumps
   setData(rows, indicators, trades, endIndex) {
+    this.lastEndIndex = endIndex;
     const slice = rows.slice(0, endIndex + 1);
     const times = slice.map(r => r.time);
 
@@ -165,7 +173,68 @@ export class ChartManager {
     this.setLineData(this.series.bbLow, times, indicators.bb.lower, endIndex);
     this.setLineData(this.series.bbMid, times, indicators.bb.middle, endIndex);
 
-    // Trade markers on candles
+    // Trade markers
+    this._setMarkers(trades, endIndex);
+
+    // RSI
+    this.setLineData(this.series.rsi, times, indicators.rsi14, endIndex);
+
+    // MACD
+    this._setMacdFull(rows, indicators, endIndex);
+
+    // Volume
+    this.series.volume.setData(slice.map(r => ({
+      time: r.time, value: r.volume,
+      color: r.close >= r.open ? COLORS.up + '88' : COLORS.down + '88',
+    })));
+  }
+
+  // Incremental append — used when stepping forward by 1 during playback.
+  // Uses update() so Lightweight Charts' auto-scroll works naturally:
+  // if user is at the right edge → chart follows; if scrolled away → stays put.
+  appendBar(rows, indicators, trades, endIndex) {
+    this.lastEndIndex = endIndex;
+    const i = endIndex;
+    const r = rows[i];
+    const time = r.time;
+
+    // Price candle
+    this.series.candles.update({ time, open: r.open, high: r.high, low: r.low, close: r.close });
+
+    // Overlays — update() appends if new time
+    this._updateLine(this.series.sma50, time, indicators.sma50[i]);
+    this._updateLine(this.series.sma200, time, indicators.sma200[i]);
+    this._updateLine(this.series.ema50, time, indicators.ema50[i]);
+    this._updateLine(this.series.bbUp, time, indicators.bb.upper[i]);
+    this._updateLine(this.series.bbLow, time, indicators.bb.lower[i]);
+    this._updateLine(this.series.bbMid, time, indicators.bb.middle[i]);
+
+    // Trade markers — must reset fully (no incremental API)
+    this._setMarkers(trades, endIndex);
+
+    // RSI
+    this._updateLine(this.series.rsi, time, indicators.rsi14[i]);
+
+    // MACD
+    const hv = indicators.macd.histogram[i];
+    if (!isNaN(hv)) {
+      this.series.macdHist.update({ time, value: hv, color: hv >= 0 ? COLORS.macdHistUp : COLORS.macdHistDown });
+    }
+    this._updateLine(this.series.macdLine, time, indicators.macd.line[i]);
+    this._updateLine(this.series.macdSignal, time, indicators.macd.signal[i]);
+
+    // Volume
+    this.series.volume.update({
+      time, value: r.volume,
+      color: r.close >= r.open ? COLORS.up + '88' : COLORS.down + '88',
+    });
+  }
+
+  _updateLine(series, time, value) {
+    if (!isNaN(value)) series.update({ time, value });
+  }
+
+  _setMarkers(trades, endIndex) {
     const visible = trades.filter(t => t.index <= endIndex);
     this.tradeMarkers = visible;
     const markers = visible.map(t => ({
@@ -176,11 +245,9 @@ export class ChartManager {
       text: t.action === 'BUY' ? 'B' : 'S',
     }));
     this.series.candles.setMarkers(markers);
+  }
 
-    // RSI
-    this.setLineData(this.series.rsi, times, indicators.rsi14, endIndex);
-
-    // MACD
+  _setMacdFull(rows, indicators, endIndex) {
     const macdHistData = [];
     for (let i = 0; i <= endIndex; i++) {
       const v = indicators.macd.histogram[i];
@@ -192,14 +259,8 @@ export class ChartManager {
       }
     }
     this.series.macdHist.setData(macdHistData);
-    this.setLineData(this.series.macdLine, times, indicators.macd.line, endIndex);
-    this.setLineData(this.series.macdSignal, times, indicators.macd.signal, endIndex);
-
-    // Volume
-    this.series.volume.setData(slice.map(r => ({
-      time: r.time, value: r.volume,
-      color: r.close >= r.open ? COLORS.up + '88' : COLORS.down + '88',
-    })));
+    this.setLineData(this.series.macdLine, rows.map(r => r.time), indicators.macd.line, endIndex);
+    this.setLineData(this.series.macdSignal, rows.map(r => r.time), indicators.macd.signal, endIndex);
   }
 
   setLineData(series, times, values, endIndex) {
@@ -217,7 +278,6 @@ export class ChartManager {
     }
   }
 
-  // Scroll to show last N candles
   scrollToEnd(totalBars) {
     const range = { from: Math.max(0, totalBars - 80), to: totalBars };
     for (const chart of Object.values(this.charts)) {

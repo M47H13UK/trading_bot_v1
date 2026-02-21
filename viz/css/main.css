@@ -32,7 +32,6 @@ body {
   font-family: inherit;
 }
 
-.controls select { min-width: 80px; cursor: pointer; }
 .controls button {
   cursor: pointer;
   min-width: 32px;
@@ -42,7 +41,38 @@ body {
 .controls button:hover { background: #2a3a5c; }
 
 .controls input[type="number"] { width: 50px; text-align: center; }
-.controls input[type="range"] { width: 100px; accent-color: #7c4dff; }
+
+/* ─── Range slider fix ─── */
+.controls input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 120px;
+  height: 6px;
+  background: #2a3a5c;
+  border: none;
+  border-radius: 3px;
+  outline: none;
+  padding: 0;
+  margin: 0 4px;
+}
+.controls input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: #7c4dff;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid #16213e;
+}
+.controls input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: #7c4dff;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid #16213e;
+}
 
 .controls .sep {
   width: 1px;
@@ -54,6 +84,35 @@ body {
   color: #888;
   font-variant-numeric: tabular-nums;
   min-width: 90px;
+}
+
+/* ─── Asset Button ─── */
+.asset-btn {
+  min-width: 80px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+}
+
+/* ─── Strategy Button (in metrics bar) ─── */
+.strategy-btn {
+  background: #7c4dff11;
+  color: #7c4dff;
+  border: 1px solid #7c4dff44;
+  border-radius: 4px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.strategy-btn:hover {
+  background: #7c4dff33;
+  border-color: #7c4dff;
 }
 
 /* ─── Metrics Bar ─── */
@@ -77,6 +136,12 @@ body {
 
 .metrics .label { color: #888; }
 .metrics .value { font-weight: 600; }
+
+.metrics .metric-sep {
+  width: 1px;
+  height: 18px;
+  background: #2a3a5c;
+}
 
 /* ─── Chart Panes ─── */
 .chart-container {
@@ -107,6 +172,165 @@ body {
 #chart-macd  { flex: 1.5; }
 #chart-volume { flex: 1; }
 
+/* ─── Shared Modal ─── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 1000;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  position: relative;
+}
+.modal-header h3 {
+  color: #e0e0e0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* ─── Asset Picker Modal ─── */
+.asset-modal {
+  background: #16213e;
+  border: 1px solid #2a3a5c;
+  border-radius: 12px;
+  padding: 24px;
+  width: 560px;
+  max-width: 92vw;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
+}
+
+.asset-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.asset-cat-label {
+  color: #7c4dff;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #2a3a5c;
+}
+
+.asset-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.asset-chip {
+  background: #1a1a2e;
+  color: #ccc;
+  border: 1px solid #2a3a5c;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  min-width: 70px;
+}
+
+.asset-chip .chip-ticker {
+  font-weight: 700;
+  font-size: 13px;
+}
+.asset-chip .chip-name {
+  font-size: 10px;
+  color: #666;
+  font-weight: 400;
+}
+
+.asset-chip:hover {
+  background: #2a3a5c;
+  border-color: #7c4dff88;
+}
+.asset-chip:hover .chip-ticker { color: #fff; }
+.asset-chip:hover .chip-name { color: #aaa; }
+
+.asset-chip.active {
+  background: #7c4dff22;
+  border-color: #7c4dff;
+}
+.asset-chip.active .chip-ticker { color: #7c4dff; }
+.asset-chip.active .chip-name { color: #a68dff; }
+
+/* ─── Strategy Picker Modal ─── */
+.strategy-modal {
+  background: #16213e;
+  border: 1px solid #2a3a5c;
+  border-radius: 12px;
+  padding: 24px;
+  width: 520px;
+  max-width: 92vw;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
+}
+
+.strategy-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.strategy-card {
+  background: #1a1a2e;
+  border: 1px solid #2a3a5c;
+  border-radius: 8px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+  font-family: inherit;
+  color: #ccc;
+  display: block;
+  width: 100%;
+}
+
+.strategy-card:hover {
+  background: #2a3a5c;
+  border-color: #7c4dff88;
+}
+
+.strategy-card.active {
+  background: #7c4dff18;
+  border-color: #7c4dff;
+}
+
+.strategy-card .strat-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #e0e0e0;
+  margin-bottom: 4px;
+}
+.strategy-card.active .strat-name { color: #7c4dff; }
+
+.strategy-card .strat-desc {
+  font-size: 12px;
+  color: #888;
+  line-height: 1.4;
+}
+.strategy-card:hover .strat-desc { color: #aaa; }
+
 /* ─── Trade Popup ─── */
 .trade-popup-overlay {
   display: none;
@@ -123,17 +347,57 @@ body {
   border: 1px solid #2a3a5c;
   border-radius: 8px;
   padding: 20px;
-  max-width: 480px;
-  width: 90%;
+  max-width: 540px;
+  width: 92%;
   position: relative;
   box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  max-height: 85vh;
+  overflow-y: auto;
 }
 
-.trade-popup h3 { color: #e0e0e0; font-size: 15px; }
+.trade-popup h3 { font-size: 15px; }
 .trade-popup h4 { color: #aaa; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
-.trade-popup ul { font-size: 13px; line-height: 1.6; }
-.trade-popup li { color: #ccc; }
 
+/* ─── Rules Box ─── */
+.rules-box {
+  background: #0f1629;
+  border: 1px solid #2a3a5c;
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.rule {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 5px 6px;
+  border-radius: 4px;
+  margin-bottom: 2px;
+  color: #888;
+}
+
+.rule.rule-active {
+  background: #7c4dff18;
+  color: #e0e0e0;
+  border: 1px solid #7c4dff44;
+}
+
+.rule-cond { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; }
+.rule-arrow { color: #555; text-align: center; }
+.rule-act { font-weight: 600; text-align: right; }
+
+.rule-note {
+  color: #666;
+  font-size: 11px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #1a1a2e;
+}
+
+/* ─── Context Table ─── */
 .ctx-table {
   width: 100%;
   font-size: 12px;

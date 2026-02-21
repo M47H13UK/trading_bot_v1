@@ -14,7 +14,7 @@
 └──────────────┘    └────────────┘    └──────────────────┘    └────────────────┘
 ```
 
-**Result: Beats Buy & Hold on 28/41 assets (68%), wins outright on 23/41 (56%)**
+**Result: Beats Buy & Hold on 32/41 assets (78%) daily, 20/41 (49%) hourly**
 
 ---
 
@@ -51,7 +51,7 @@ before drops and be back at 100% before rallies.
 
 ---
 
-# The Peak Shaver (Flagship Strategy)
+# The Peak Shaver v2 (Flagship Strategy)
 
 ## The Idea
 
@@ -72,51 +72,52 @@ By reducing position at these peaks, we capture small but consistent alpha.
   │ during the recovery.    │            │ at 100%. Minimal drag.  │
   │ Cash drag kills alpha.  │            │ Small alpha x many days │
   │                         │            │ = consistent edge.      │
-  │ Beats B&H: 8/41 (20%)  │            │ Beats B&H: 28/41 (68%) │
+  │ Beats B&H: 8/41 (20%)  │            │ Beats B&H: 32/41 (78%) │
   └─────────────────────────┘            └─────────────────────────┘
 ```
 
-## How It Works — Two Signals
+## How It Works — Three Signals (Triple Confirmation)
+
+v2 adds Z-score as a third confirmation signal. This filters out bad trims
+where RSI is overbought but price isn't statistically stretched from its mean.
 
 ```
   Signal 1: RSI(14) > 75
   ───────────────────────
   Relative Strength Index measures how "overbought" the price action is.
-  Above 75 = heavily overbought. Price has risen too fast relative to
-  recent movement. Mean reversion is likely.
-
-  RSI scale:
-  0 ──────── 30 ──────── 50 ──────── 70 ── 75 ── 85 ── 100
-  oversold     normal       neutral     overbought  EXTREME
-                                         ▲           ▲
-                                    trigger zone  deeper cut
-
+  Above 75 = heavily overbought.
 
   Signal 2: 21-day ROC > 11%
   ──────────────────────────
   Rate of Change measures percentage gain over last 21 trading days.
-  Above 11% = the asset gained 11%+ in a single month. That's extreme.
+  Above 11% = gained 11%+ in a single month.
 
-  ROC scale:
-  -20% ──── -10% ──── 0% ──── 5% ──── 11% ──── 20% ──── 30%+
-   crash      bad     flat    normal   trigger   parabolic
-                                        ▲
-                                   threshold
+  Signal 3: Z-score(50) > 1.0  [NEW in v2]
+  ─────────────────────────────────────────
+  Z-score measures how many standard deviations the price is above its
+  50-day moving average. > 1.0 = price is statistically stretched.
+  This prevents trimming during steady trends where RSI stays high
+  but price isn't far from its trend line (e.g., JNJ, DIA, JPM).
+
+  For deep trim (Tier 2): Z-score > 3.0 required — only at genuine
+  blow-off tops (3+ std devs above mean).
 ```
 
 ## Decision Logic
 
 ```
-  ┌─────────────────────────────────────────────────────────────┐
-  │                                                             │
-  │  IF RSI > 85:           position = 30%   (extreme peak)    │
-  │  ELIF RSI > 75 AND                                         │
-  │       ROC(21) > 11%:    position = 50%   (overbought peak) │
-  │  ELSE:                  position = 100%  (normal)          │
-  │                                                             │
-  │  That's it. Three lines of logic.                          │
-  │                                                             │
-  └─────────────────────────────────────────────────────────────┘
+  ┌──────────────────────────────────────────────────────────────────┐
+  │                                                                  │
+  │  IF RSI > 85 AND Z-score > 3.0:                                 │
+  │      position = 30%    (extreme overbought + extreme stretch)    │
+  │  ELIF RSI > 75 AND ROC(21) > 11% AND Z-score > 1.0:            │
+  │      position = 40%    (overbought + momentum + stretched)       │
+  │  ELSE:                                                           │
+  │      position = 100%   (normal — fully invested)                 │
+  │                                                                  │
+  │  Timeframe-adaptive: periods auto-scale for hourly/daily bars.   │
+  │                                                                  │
+  └──────────────────────────────────────────────────────────────────┘
 ```
 
 Visualized over time:
@@ -126,7 +127,7 @@ Visualized over time:
 
   100% │▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
        │▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
-   50% │                     █                     █
+   40% │                     █                     █
        │                     █                     █
    30% │
        └────────────────────────────────────────────────────────────── Time
@@ -164,14 +165,17 @@ Visualized over time:
 
   Across 41 assets, 10 years each:
   ┌───────────────────────────────────────────────────┐
-  │  Wins: 28 assets  (avg alpha per win: +18.5%)     │
-  │  Losses: 13 assets (dominated by crypto & TSLA)   │
-  │  Median alpha: +4.1% (positive!)                   │
+  │  Wins: 32 assets  (78% beat rate)                  │
+  │  Losses: 9 assets (dominated by crypto & TSLA)     │
+  │  Median alpha: +5.5% (positive!)                   │
   │                                                    │
-  │  Losers are overwhelmingly parabolic assets where  │
+  │  v2 improvement: Z-score filter prevented bad      │
+  │  trims on AAPL, DIA, IEF, JPM, SHY, XLF.          │
+  │  (+6 gained, -2 lost vs v1)                        │
+  │                                                    │
+  │  Remaining losers: parabolic assets where           │
   │  momentum overwhelms mean reversion:               │
-  │  BTC (-12,180%), TSLA (-2,125%), ETH (-398%)       │
-  │  Without these 3, the rest lose by only -2% to -26%│
+  │  BTC (-12,406%), TSLA (-2,166%), ETH (-383%)       │
   └───────────────────────────────────────────────────┘
 ```
 
@@ -242,7 +246,7 @@ Visualized over time:
                Back to matching B&H, but starting from a higher base.
 
   ═══════════════════════════════════════════════════════════════════
-  Over 10 years on SPY: PeakShaver +321.8% vs B&H +317.6% (+4.1%)
+  Over 10 years on SPY: PeakShaver v2 +318.9% vs B&H +317.6% (+1.3%)
   Small per-event alpha × many events = consistent edge.
   ═══════════════════════════════════════════════════════════════════
 ```
@@ -281,8 +285,9 @@ Beats B&H on only 8/41 assets — the binary in/out problem persists.
 
 | Indicator | Function | Used By |
 |:----------|:---------|:--------|
-| RSI(14) | Overbought/oversold oscillator, 0-100 | **Peak Shaver**, Crash Avoidance |
-| ROC(21) | 21-day Rate of Change (1-month momentum) | **Peak Shaver**, Momentum Composite |
+| RSI(14) | Overbought/oversold oscillator, 0-100 | **Peak Shaver v2**, Crash Avoidance |
+| ROC(21) | 21-day Rate of Change (1-month momentum) | **Peak Shaver v2**, Momentum Composite |
+| Z-score(50) | Std devs above 50-day mean (statistical stretch) | **Peak Shaver v2** |
 | SMA(N) | Simple Moving Average | SMA200 Trend, Dual MA, Crash Avoidance |
 | EMA(N) | Exponential Moving Average | Volume Trend |
 | ATR(14) | Average True Range (volatility) | Crash Avoidance |
@@ -294,7 +299,7 @@ Beats B&H on only 8/41 assets — the binary in/out problem persists.
 | Method | Used By | Position Range | Description |
 |:-------|:--------|:--------------|:------------|
 | `run()` | Binary strategies | 0% or 100% | All-in / all-out trades |
-| `run_positions()` | **Peak Shaver** | 0% to 100% | Continuous sizing, rebalances on 5%+ drift |
+| `run_positions()` | **Peak Shaver v2** | 0% to 100% | Continuous sizing, rebalances on 5%+ drift |
 
 ## Constants
 
@@ -312,8 +317,14 @@ trading_bot_v1/
 ├── backtest_results.png        ← chart output (single asset)
 ├── cross_asset_results.png     ← chart output (all 41 assets)
 ├── test_data/
-│   ├── SPY.csv ... (41 CSVs)  ← 10yr Yahoo Finance data
-│   └── BACKTEST_RESULTS.md     ← comprehensive results table
+│   ├── BACKTEST_RESULTS.md     ← v1 vs v2 daily comparison
+│   ├── daily/                  ← 10yr daily Yahoo Finance data
+│   │   ├── SPY.csv ... (41)
+│   │   └── DATA_REFERENCE.md
+│   └── hourly/                 ← 2yr hourly Yahoo Finance data
+│       ├── SPY.csv ... (41)
+│       ├── DATA_REFERENCE.md
+│       └── BACKTEST_RESULTS.md
 ├── CLAUDE.md                   ← hackathon context
 └── HOW_IT_WORKS.md             ← this file
 ```

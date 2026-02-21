@@ -58,6 +58,21 @@ export function roc(values, period = 21) {
   return out;
 }
 
+export function zscore(values, window = 50) {
+  const mean = sma(values, window);
+  const out = new Array(values.length).fill(NaN);
+  for (let i = window - 1; i < values.length; i++) {
+    let sum2 = 0;
+    for (let j = i - window + 1; j <= i; j++) {
+      const d = values[j] - mean[i];
+      sum2 += d * d;
+    }
+    const std = Math.sqrt(sum2 / (window - 1));
+    out[i] = std > 0 ? (values[i] - mean[i]) / std : 0;
+  }
+  return out;
+}
+
 export function bollingerBands(values, window = 20, numStd = 2) {
   const mid = sma(values, window);
   const upper = new Array(values.length).fill(NaN);
@@ -69,7 +84,6 @@ export function bollingerBands(values, window = 20, numStd = 2) {
       const diff = values[j] - mid[i];
       sum2 += diff * diff;
     }
-    // ddof=1 to match pandas default
     const std = Math.sqrt(sum2 / (window - 1));
     upper[i] = mid[i] + std * numStd;
     lower[i] = mid[i] - std * numStd;
@@ -156,16 +170,22 @@ export function obv(rows) {
 // Compute all indicators for a dataset
 export function computeAll(rows) {
   const closes = rows.map(r => r.close);
+  const obvVals = obv(rows);
   return {
     sma50: sma(closes, 50),
     sma200: sma(closes, 200),
     ema50: ema(closes, 50),
     rsi14: rsi(closes, 14),
     roc21: roc(closes, 21),
+    roc63: roc(closes, 63),
+    roc252: roc(closes, 252),
+    zscore50: zscore(closes, 50),
     bb: bollingerBands(closes, 20, 2),
     macd: macd(closes, 12, 26, 9),
     atr14: atr(rows, 14),
+    atr14_avg252: sma(atr(rows, 14), 252),
     adx14: adx(rows, 14),
-    obv: obv(rows),
+    obv: obvVals,
+    obvEma50: ema(obvVals, 50),
   };
 }
