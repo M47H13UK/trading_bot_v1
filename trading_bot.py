@@ -26,6 +26,23 @@ from datetime import datetime
 import warnings
 warnings.filterwarnings("ignore")
 
+# ML imports are lazy to avoid circular import (ml_peak_shaver imports from here)
+ML_READY = False
+
+def _init_ml():
+    """Lazy-load ML module. Returns True if available."""
+    global ML_READY
+    if ML_READY:
+        return True
+    try:
+        import ml_peak_shaver
+        if ml_peak_shaver.ML_AVAILABLE:
+            ML_READY = True
+            return True
+    except ImportError:
+        pass
+    return False
+
 
 # =============================================================================
 # CONSTANTS
@@ -194,6 +211,10 @@ def select_data_source():
     # Run-all options
     options.append(">> Run ALL daily datasets (cross-asset performance test)")
     options.append(">> Run ALL hourly datasets (cross-asset, 2yr hourly bars)")
+    ml_ok = _init_ml()
+    if ml_ok:
+        options.append(">> ML Peak Shaver: Train + Evaluate on ALL daily datasets")
+        options.append(">> ML Peak Shaver: Run on single dataset (select next)")
 
     # Daily datasets
     for f in csv_files:
@@ -237,12 +258,21 @@ def select_data_source():
     if index == 1:
         return None, None, "hourly"  # run-all hourly mode
 
+    # ML options (only present if ml_ok)
+    ml_offset = 2
+    if ml_ok:
+        if index == 2:
+            return None, None, "ml_eval"  # ML full evaluation
+        if index == 3:
+            return None, None, "ml_single"  # ML single — re-prompt for asset
+        ml_offset = 4
+
     if index == len(options) - 1:
         print("\nUsing randomly generated data...\n")
         return generate_sample_data(), "Synthetic", False
 
     # Determine which file was selected
-    daily_offset = 2  # after the two "Run ALL" options
+    daily_offset = ml_offset  # after run-all + ML options
     hourly_offset = daily_offset + len(csv_files)
 
     if index < hourly_offset:
@@ -380,172 +410,10 @@ def detect_regime(df, adx_period=14, trend_thresh=25, range_thresh=20):
 
 
 # =============================================================================
-# 4. STRATEGIES — all return (trades_series, indicators_dict)
-#    trades: 1=buy, -1=sell, 0=hold
-#    Optimized to maximize time invested while avoiding major drawdowns.
+# 4. STRATEGIES — Peak Shaver family (continuous position sizing)
+#    Returns (position_series, indicators_dict)
+#    100% invested by default, trims at peaks. No leverage, no shorting.
 # =============================================================================
-
-def strategy_sma200_trend(df):
-    """Faber Timing Model: long when above SMA(200), 3-day confirmation.
-    ~75% invested. Avoids major bear markets."""
-    close = df["Close"]
-    sma_200 = sma(close, 200)
-
-    above = close > sma_200
-
-    # 3-day confirmation filter to reduce whipsaws
-    enter = above.rolling(3).min() == 1
-    exit_ = (~above).rolling(3).min() == 1
-
-    signal = pd.Series(np.nan, index=df.index)
-    signal[enter] = 1
-    signal[exit_] = 0
-    position = signal.ffill().fillna(0)
-
-    trades = position.diff().fillna(0)
-    trades[trades > 0] = 1
-    trades[trades < 0] = -1
-
-    return trades, {"position": position, "sma_200": sma_200}
-
-
-def strategy_dual_ma(df):
-    """Golden/Death Cross: SMA(50) vs SMA(200) with 1% band filter.
-    ~70% invested. Fewer whipsaws than single MA."""
-    close = df["Close"]
-    sma_50 = sma(close, 50)
-    sma_200 = sma(close, 200)
-
-    signal = pd.Series(np.nan, index=df.index)
-    signal[sma_50 > sma_200 * 1.01] = 1
-    signal[sma_50 < sma_200 * 0.99] = 0
-    position = signal.ffill().fillna(0)
-
-    trades = position.diff().fillna(0)
-    trades[trades > 0] = 1
-    trades[trades < 0] = -1
-
-    return trades, {"position": position, "sma_50": sma_50, "sma_200": sma_200}
-
-
-def strategy_momentum_composite(df):
-    """Multi-timeframe momentum: 1/3/12-month ROC vote.
-    ~70% invested. Invests when 2+ timeframes are positive."""
-    close = df["Close"]
-
-    mom_1m = roc(close, 21)
-    mom_3m = roc(close, 63)
-    mom_12m = roc(close, 252)
-
-    bullish = (
-        (mom_1m > 0).astype(int) +
-        (mom_3m > 0).astype(int) +
-        (mom_12m > 0).astype(int)
-    )
-
-    signal = pd.Series(np.nan, index=df.index)
-    signal[bullish >= 2] = 1
-    signal[bullish == 0] = 0
-    position = signal.ffill().fillna(0)
-
-    trades = position.diff().fillna(0)
-    trades[trades > 0] = 1
-    trades[trades < 0] = -1
-
-    return trades, {
-        "position": position,
-        "mom_1m": mom_1m, "mom_3m": mom_3m, "mom_12m": mom_12m,
-    }
-
-
-def strategy_crash_avoidance(df):
-    """Always invested by default. Exit ONLY on confirmed crashes.
-    ~90-95% invested. Uses 4 independent crash signals."""
-    close = df["Close"]
-    sma_50 = sma(close, 50)
-    sma_200 = sma(close, 200)
-    atr_val = atr(df, 14)
-    atr_base = atr_val.rolling(252).mean()
-    rsi_val = rsi(close, 14)
-
-    below_trend = (close < sma_200).astype(float)
-    death_cross = (sma_50 < sma_200).astype(float)
-    vol_spike = (atr_val > 2.0 * atr_base).astype(float).fillna(0)
-    rsi_weak = (rsi_val < 35).astype(float).fillna(0)
-
-    crash_score = (below_trend + death_cross + vol_spike + rsi_weak) / 4
-
-    signal = pd.Series(np.nan, index=df.index)
-    signal[crash_score >= 0.75] = 0   # confirmed crash -> exit
-    signal[crash_score <= 0.25] = 1   # all clear -> re-enter
-    position = signal.ffill().fillna(1)  # DEFAULT: INVESTED
-
-    trades = position.diff().fillna(0)
-    trades[trades > 0] = 1
-    trades[trades < 0] = -1
-
-    return trades, {"position": position, "crash_score": crash_score}
-
-
-def strategy_volume_trend(df):
-    """Price + volume trend confirmation.
-    ~80% invested. Exit only when BOTH price and volume break down."""
-    close = df["Close"]
-    ema_50 = ema(close, 50)
-    obv_val = obv(df)
-    obv_ema = ema(obv_val, 50)
-
-    price_up = close > ema_50
-    vol_up = obv_val > obv_ema
-
-    signal = pd.Series(np.nan, index=df.index)
-    signal[price_up & vol_up] = 1       # both confirm -> invest
-    signal[~price_up & ~vol_up] = 0     # both break -> exit
-    position = signal.ffill().fillna(0)
-
-    trades = position.diff().fillna(0)
-    trades[trades > 0] = 1
-    trades[trades < 0] = -1
-
-    return trades, {"position": position, "obv": obv_val, "obv_ema": obv_ema}
-
-
-def strategy_master_ensemble(df):
-    """Master Ensemble v2: majority vote with long bias.
-    Enter when 3+ of 5 strategies agree bullish.
-    Exit when 1 or fewer remain bullish.
-    Crash avoidance provides persistent long bias (~90%+)."""
-    _, ind1 = strategy_sma200_trend(df)
-    _, ind2 = strategy_dual_ma(df)
-    _, ind3 = strategy_momentum_composite(df)
-    _, ind4 = strategy_crash_avoidance(df)
-    _, ind5 = strategy_volume_trend(df)
-
-    p1 = ind1["position"]
-    p2 = ind2["position"]
-    p3 = ind3["position"]
-    p4 = ind4["position"]
-    p5 = ind5["position"]
-
-    consensus = p1 + p2 + p3 + p4 + p5  # 0 to 5
-
-    # Hysteresis: enter at 3+, exit at <=1
-    position = pd.Series(0.0, index=df.index)
-    pos = 0
-    for i in range(len(consensus)):
-        c = consensus.iloc[i]
-        if pos == 0 and c >= 3:
-            pos = 1
-        elif pos == 1 and c <= 1:
-            pos = 0
-        position.iloc[i] = pos
-
-    trades = position.diff().fillna(0)
-    trades[trades > 0] = 1
-    trades[trades < 0] = -1
-
-    return trades, {"position": position, "consensus": consensus}
-
 
 def _detect_bars_per_day(df):
     """Detect timeframe from data index spacing (1=daily, 7=hourly)."""
@@ -1165,7 +1033,27 @@ def main():
     elif run_all == "hourly":
         run_all_datasets(HOURLY_DATA_DIR, "Hourly")
         return
+    elif run_all == "ml_eval":
+        from ml_peak_shaver import evaluate_ml_enhancement as _ml_eval
+        _ml_eval()
+        return
+    elif run_all == "ml_single":
+        from ml_peak_shaver import train_ml_models as _ml_train
+        # Re-prompt for a single asset, then run with ML
+        df, asset_name, _ = select_data_source()
+        if df is None:
+            print("No asset selected.")
+            return
+        print("Training ML models on all daily assets...")
+        models = _ml_train()
+        _run_single_asset(df, asset_name, ml_models=models)
+        return
 
+    _run_single_asset(df, asset_name)
+
+
+def _run_single_asset(df, asset_name, ml_models=None):
+    """Run all strategies on a single asset."""
     print(f"Data: {len(df)} trading days, {df.index[0].date()} to {df.index[-1].date()}")
     print(f"Price range: ${df['Close'].min():.2f} to ${df['Close'].max():.2f}\n")
 
@@ -1177,30 +1065,25 @@ def main():
     print(f"Regime breakdown: {trending_pct:.0f}% trending, "
           f"{ranging_pct:.0f}% ranging, {neutral_pct:.0f}% neutral\n")
 
-    # Run all strategies
+    # Run Peak Shaver strategies
     bt = Backtester(df, initial_capital=10_000, commission=COMMISSION)
-
-    strategies = [
-        ("SMA(200) Trend",          strategy_sma200_trend),
-        ("Dual MA (50/200)",        strategy_dual_ma),
-        ("Momentum Composite",      strategy_momentum_composite),
-        ("Crash Avoidance",         strategy_crash_avoidance),
-        ("Volume Trend",            strategy_volume_trend),
-        ("** MASTER ENSEMBLE **",   strategy_master_ensemble),
-    ]
-
     all_results = []
-    for name, strat_fn in strategies:
-        trades, indicators = strat_fn(df)
-        result = bt.run(trades, strategy_name=name)
-        all_results.append(result)
 
-    # Peak Shaver (continuous position sizing, no leverage)
-    positions, _ = strategy_peak_shaver(df)
-    peak_result = bt.run_positions(positions, strategy_name="** PEAK SHAVER v2 **")
-    all_results.append(peak_result)
+    # Peak Shaver v1
+    pos_v1, _ = strategy_peak_shaver_v1(df)
+    all_results.append(bt.run_positions(pos_v1, strategy_name="PEAK SHAVER v1"))
 
-    # Use regime detection for plotting (ensemble no longer carries it)
+    # Peak Shaver v2
+    pos_v2, _ = strategy_peak_shaver(df)
+    all_results.append(bt.run_positions(pos_v2, strategy_name="** PEAK SHAVER v2 **"))
+
+    # ML Peak Shaver (if models available)
+    if ml_models is not None:
+        from ml_peak_shaver import strategy_ml_peak_shaver as _ml_strat
+        ml_pos, _ = _ml_strat(df, ml_models)
+        all_results.append(bt.run_positions(ml_pos, strategy_name="** ML PEAK SHAVER **"))
+
+    # Use regime detection for plotting
     plot_regime = regime
 
     print_summary(all_results)
