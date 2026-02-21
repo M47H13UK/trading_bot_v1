@@ -504,28 +504,22 @@ def strategy_master_ensemble(df):
     return trades, {"position": position, "consensus": consensus}
 
 
-def strategy_adaptive_ensemble(df):
-    """Adaptive Ensemble: consensus-based position sizing, max 100%.
-    Stays near 100% during normal conditions, reduces only on confirmed risk.
-    No leverage — positions always between 0% and 100%.
+def strategy_peak_shaver(df):
+    """Peak Shaver: 100% invested, reduces only at overbought peaks.
+    Uses RSI(14) + 21-day momentum to detect euphoric overbought conditions.
+    When RSI > 75 AND 1m momentum > 11%: reduce to 50%.
+    When RSI > 85: reduce to 30%.
+    ~95%+ time fully invested — alpha from mean-reversion at peaks.
     Returns position_series for use with Backtester.run_positions()."""
-    _, ind1 = strategy_sma200_trend(df)
-    _, ind2 = strategy_dual_ma(df)
-    _, ind3 = strategy_momentum_composite(df)
-    _, ind4 = strategy_crash_avoidance(df)
-    _, ind5 = strategy_volume_trend(df)
+    close = df["Close"]
+    rsi_val = rsi(close, 14)
+    mom_1m = roc(close, 21)
 
-    consensus = (ind1["position"] + ind2["position"] + ind3["position"] +
-                 ind4["position"] + ind5["position"])
+    position = pd.Series(1.0, index=df.index)
+    position[(rsi_val > 75) & (mom_1m > 11)] = 0.50
+    position[rsi_val > 85] = 0.30
 
-    # Asymmetric position sizing: heavily biased toward full investment.
-    # consensus 4-5 -> 100%, 3 -> 90%, 2 -> 70%, 1 -> 40%, 0 -> 20%
-    # Alpha comes from reducing exposure during crashes, not from leverage.
-    c = consensus.round().astype(int).clip(0, 5)
-    mapping = {0: 0.20, 1: 0.40, 2: 0.70, 3: 0.90, 4: 1.0, 5: 1.0}
-    position = c.map(mapping).fillna(1.0)
-
-    return position, {"position": position, "consensus": consensus}
+    return position, {"position": position, "rsi": rsi_val, "mom_1m": mom_1m}
 
 
 # =============================================================================
@@ -959,7 +953,7 @@ def run_all_datasets():
         print("No data files found. Run the bot normally first to download data.")
         return
 
-    print(f"\nRunning Master Adaptive Ensemble on {len(csv_files)} assets...\n")
+    print(f"\nRunning Peak Shaver on {len(csv_files)} assets...\n")
 
     results = []
     for f in csv_files:
@@ -970,7 +964,7 @@ def run_all_datasets():
             if len(df) < 100:
                 continue
             bt = Backtester(df, initial_capital=10_000, commission=COMMISSION)
-            positions, _ = strategy_adaptive_ensemble(df)
+            positions, _ = strategy_peak_shaver(df)
             r = bt.run_positions(positions, strategy_name=stem)
             r["asset"] = stem
             r["category"] = category
@@ -991,7 +985,7 @@ def run_all_datasets():
 
     # Summary stats
     print("\n" + "=" * 90)
-    print("CROSS-ASSET SUMMARY: Master Adaptive Ensemble")
+    print("CROSS-ASSET SUMMARY: Peak Shaver")
     print("=" * 90)
 
     beats_bnh = sum(1 for r in results
@@ -1097,10 +1091,10 @@ def main():
         result = bt.run(trades, strategy_name=name)
         all_results.append(result)
 
-    # Adaptive ensemble (continuous position sizing, no leverage)
-    positions, _ = strategy_adaptive_ensemble(df)
-    adapt_result = bt.run_positions(positions, strategy_name="** ADAPTIVE ENSEMBLE **")
-    all_results.append(adapt_result)
+    # Peak Shaver (continuous position sizing, no leverage)
+    positions, _ = strategy_peak_shaver(df)
+    peak_result = bt.run_positions(positions, strategy_name="** PEAK SHAVER **")
+    all_results.append(peak_result)
 
     # Use regime detection for plotting (ensemble no longer carries it)
     plot_regime = regime
