@@ -1,0 +1,187 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #1a1a2e;
+  color: #e0e0e0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Top Controls ─── */
+.controls {
+  background: #16213e;
+  border-bottom: 1px solid #2a3a5c;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.controls select, .controls input, .controls button {
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border: 1px solid #2a3a5c;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.controls select { min-width: 80px; cursor: pointer; }
+.controls button {
+  cursor: pointer;
+  min-width: 32px;
+  font-size: 14px;
+  transition: background 0.15s;
+}
+.controls button:hover { background: #2a3a5c; }
+
+.controls input[type="number"] { width: 50px; text-align: center; }
+.controls input[type="range"] { width: 100px; accent-color: #7c4dff; }
+
+.controls .sep {
+  width: 1px;
+  height: 20px;
+  background: #2a3a5c;
+}
+
+.controls .counter {
+  color: #888;
+  font-variant-numeric: tabular-nums;
+  min-width: 90px;
+}
+
+/* ─── Metrics Bar ─── */
+.metrics {
+  background: #0f1629;
+  border-bottom: 1px solid #2a3a5c;
+  padding: 6px 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  flex-wrap: wrap;
+}
+
+.metrics .metric {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.metrics .label { color: #888; }
+.metrics .value { font-weight: 600; }
+
+/* ─── Chart Panes ─── */
+.chart-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.chart-pane {
+  position: relative;
+  border-bottom: 1px solid #2a3a5c;
+  overflow: hidden;
+}
+
+.chart-pane .pane-label {
+  position: absolute;
+  top: 4px;
+  left: 8px;
+  z-index: 10;
+  color: #555;
+  font-size: 11px;
+  pointer-events: none;
+}
+
+#chart-price { flex: 6; }
+#chart-rsi   { flex: 1.5; }
+#chart-macd  { flex: 1.5; }
+#chart-volume { flex: 1; }
+
+/* ─── Trade Popup ─── */
+.trade-popup-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 1000;
+  justify-content: center;
+  align-items: center;
+}
+
+.trade-popup {
+  background: #16213e;
+  border: 1px solid #2a3a5c;
+  border-radius: 8px;
+  padding: 20px;
+  max-width: 480px;
+  width: 90%;
+  position: relative;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+
+.trade-popup h3 { color: #e0e0e0; font-size: 15px; }
+.trade-popup h4 { color: #aaa; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+.trade-popup ul { font-size: 13px; line-height: 1.6; }
+.trade-popup li { color: #ccc; }
+
+.ctx-table {
+  width: 100%;
+  font-size: 12px;
+  border-collapse: collapse;
+}
+.ctx-table td {
+  padding: 3px 6px;
+  border-bottom: 1px solid #1a1a2e;
+}
+.ctx-table td:nth-child(odd) { color: #888; }
+.ctx-table td:nth-child(even) { color: #e0e0e0; text-align: right; }
+
+.popup-close {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 20px;
+  cursor: pointer;
+}
+.popup-close:hover { color: #e0e0e0; }
+
+/* ─── Loading ─── */
+.loading-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 26, 46, 0.85);
+  z-index: 2000;
+  justify-content: center;
+  align-items: center;
+  font-size: 16px;
+  color: #7c4dff;
+}
+
+/* ─── Keyboard hint ─── */
+.kbd-hint {
+  color: #555;
+  font-size: 11px;
+  margin-left: auto;
+}
+.kbd-hint kbd {
+  background: #1a1a2e;
+  border: 1px solid #2a3a5c;
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-family: inherit;
+  font-size: 11px;
+}
