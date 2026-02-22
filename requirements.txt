@@ -6,3 +6,5 @@ pick
 xgboost
 scikit-learn
 joblib
+streamlit
+plotly

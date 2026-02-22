@@ -292,7 +292,7 @@ python3 trading_bot.py
 # Select "ML Peak Shaver: Train + Evaluate on ALL daily datasets"
 
 # Programmatic
-from ml_peak_shaver import train_ml_models, strategy_ml_peak_shaver
+from ml_peak_shaver_v2 import train_ml_models, strategy_ml_peak_shaver
 models = train_ml_models()  # trains on all daily assets
 positions, indicators = strategy_ml_peak_shaver(df, models)
 ```

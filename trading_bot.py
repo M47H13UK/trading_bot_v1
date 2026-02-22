@@ -35,7 +35,7 @@ def _init_ml():
     if ML_READY:
         return True
     try:
-        import ml_peak_shaver
+        import ml_peak_shaver_v2 as ml_peak_shaver
         if ml_peak_shaver.ML_AVAILABLE:
             ML_READY = True
             return True
@@ -1034,11 +1034,11 @@ def main():
         run_all_datasets(HOURLY_DATA_DIR, "Hourly")
         return
     elif run_all == "ml_eval":
-        from ml_peak_shaver import evaluate_ml_enhancement as _ml_eval
+        from ml_peak_shaver_v2 import evaluate_ml_enhancement as _ml_eval
         _ml_eval()
         return
     elif run_all == "ml_single":
-        from ml_peak_shaver import train_ml_models as _ml_train
+        from ml_peak_shaver_v2 import train_ml_models as _ml_train
         # Re-prompt for a single asset, then run with ML
         df, asset_name, _ = select_data_source()
         if df is None:
@@ -1079,7 +1079,7 @@ def _run_single_asset(df, asset_name, ml_models=None):
 
     # ML Peak Shaver (if models available)
     if ml_models is not None:
-        from ml_peak_shaver import strategy_ml_peak_shaver as _ml_strat
+        from ml_peak_shaver_v2 import strategy_ml_peak_shaver as _ml_strat
         ml_pos, _ = _ml_strat(df, ml_models)
         all_results.append(bt.run_positions(ml_pos, strategy_name="** ML PEAK SHAVER **"))
 
