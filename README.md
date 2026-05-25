@@ -1,60 +1,109 @@
 # Adaptive Regime-Based Trading Bot
 
-Built for the **Lancaster University Quant Hackathon** (LEFS x FemTech, Feb 2026).
+**🏆 1st place — Lancaster University Quant Hackathon (LEFS x FemTech, Feb 2026)**
 
-## What It Does
+A long-only adaptive trading system backtested across 41 assets and 10 years of daily data. Combines classical technical-indicator strategies with XGBoost/Random Forest models, evaluated under a unified backtester with continuous 0–100% position sizing.
 
-Backtests 7 trading strategies across 41 assets (indices, sectors, stocks, commodities, crypto, bonds, forex) using ~10 years of daily data from Yahoo Finance.
+![Backtest example](backtest_results.png)
 
-**Flagship strategy — Peak Shaver:** stays 100% invested by default, reduces to 50% exposure only at overbought peaks (RSI > 75 + ROC > 11%). Beats Buy & Hold on 23/41 assets outright.
+---
 
-### All Strategies
+## Headline Results
 
-| Strategy | Approach |
-|:---------|:---------|
-| SMA(200) Trend | Faber timing — long above 200-day SMA, 3-day confirmation |
-| Dual MA (50/200) | Golden/death cross with 1% band filter |
-| Momentum Composite | Multi-timeframe momentum (1/3/12-month) majority vote |
-| Crash Avoidance | Always invested, exit only on 3/4 crash signals |
-| Volume Trend | Price + OBV dual confirmation |
-| Master Ensemble | Majority vote across 5 strategies |
-| **Peak Shaver** | **Flagship** — shaves peaks instead of avoiding crashes |
+Tested on 41 assets across 8 categories (Index, Stock, Sector, Global, Commodity, Crypto, Bond, Forex). $10,000 initial capital, 0% commission, no leverage, no shorting.
+
+| Strategy           | Type        | Daily (10y) | Hourly (2y) |
+|:-------------------|:------------|:-----------:|:-----------:|
+| Peak Shaver v1     | Rule-based  | 28/41 (68%) | 24/41 (59%) |
+| **Peak Shaver v2** | Rule-based  | **32/41 (78%)** | 20/41 (49%) |
+| ML Peak Shaver v2  | XGB + RF    | 30/41 (73%) | 19/41 (46%) |
+| **ML v3 Return Maximizer** | XGB + RF | 26/41 (63%) | **30/41 (73%)** |
+
+Win-rate = beats Buy & Hold on that asset. Full per-asset breakdown in [`test_data/BACKTEST_RESULTS/DAILY.md`](test_data/BACKTEST_RESULTS/DAILY.md) and [`HOURLY.md`](test_data/BACKTEST_RESULTS/HOURLY.md).
+
+---
+
+## Core Insight
+
+Traditional active strategies are binary (100% invested or 100% cash). In a 10-year bull market, every day in cash compounds against you, and missing the 10 best days roughly halves total returns — and the best days cluster right after the worst, so exiting during a crash forfeits the recovery.
+
+So we don't try to avoid crashes. We **shave peaks**: stay 100% invested by default, trim exposure only when multiple overbought signals fire simultaneously, and snap back to full exposure fast. Full reasoning in [HOW_IT_WORKS.md](HOW_IT_WORKS.md).
+
+---
+
+## Strategies
+
+| Code      | Approach                                                                                |
+|:----------|:----------------------------------------------------------------------------------------|
+| SMA(200)  | Faber timing — long above 200-day SMA, 3-day confirmation                               |
+| Dual MA   | 50/200 golden-cross / death-cross with 1% band filter                                   |
+| Momentum  | Multi-timeframe (1/3/12-month) majority vote                                            |
+| Crash Avoid | Stay invested; exit only on 3/4 crash signals                                         |
+| Volume    | Price + OBV dual confirmation                                                           |
+| Ensemble  | Majority vote across the five above                                                     |
+| **PSv1**  | RSI(14)>75 + ROC(21)>11% → 50% exposure; RSI>85 → 30%                                  |
+| **PSv2**  | PSv1 + Z-score(50)>1.0 and >3.0 tiered gates; timeframe-adaptive indicator periods     |
+| **ML v2** | XGBRegressor + RandomForest, multi-horizon labels, magnitude-weighted, dynamic ensemble |
+| **ML v3** | Every-bar return prediction, binary 100%/0% sizing, 37 features, bullish-bias threshold |
+
+---
 
 ## Quick Start
 
 ```bash
-pip install pandas numpy matplotlib yfinance pick
+pip install -r requirements.txt
+```
+
+**Interactive CLI** (run any strategy on any asset):
+```bash
 python trading_bot.py
 ```
 
-Interactive menu lets you:
-- Run single-asset backtest
-- Run full cross-asset test (41 assets)
-- View results and charts
+**Streamlit terminal dashboard** (Bloomberg/TradingView-style demo):
+```bash
+streamlit run dashboard.py
+```
 
-## Results
+**Browser visualizer** (lightweight-charts, step-through bar-by-bar):
+```bash
+open viz/index.html
+```
 
-Tested on 41 assets across 8 categories with $10k initial capital and 0% commission:
+**Full cross-asset backtest** (regenerates `BACKTEST_RESULTS/*.md`):
+```bash
+python run_full_backtest.py
+```
 
-| Category | Peak Shaver Avg | B&H Avg | Peak Shaver Wins |
-|:---------|----------------:|--------:|-----------------:|
-| Index (4) | +330.5% | +328.0% | 3/4 |
-| Sector (10) | +251.9% | +246.9% | 7/10 |
-| Stock (8) | +695.2% | +929.7% | 4/8 |
-| Overall (41) | — | — | 23/41 |
+---
 
 ## Project Structure
 
 ```
-trading_bot.py          # Main bot — strategies, backtester, visualization
-HOW_IT_WORKS.md         # Detailed technical explanation
-test_data/              # Cached Yahoo Finance CSVs (41 assets, ~10yr each)
-  BACKTEST_RESULTS.md   # Full results table
-  DATA_REFERENCE.md     # Data source documentation
-backtest_results.png    # Single-asset backtest chart
-cross_asset_results.png # Cross-asset comparison chart
+trading_bot.py              # Core: indicators, strategies, backtester, CLI
+ml_peak_shaver_v2.py        # ML strategy v2 — XGB + RF, multi-horizon labels
+ml_peak_shaver_v3.py        # ML strategy v3 — every-bar return prediction
+dashboard.py                # Streamlit terminal-style demo
+run_full_backtest.py        # Regenerates the BACKTEST_RESULTS markdown
+viz/                        # Browser visualizer (lightweight-charts + vanilla JS)
+test_data/
+  daily/                    # 41 assets × ~10y daily OHLCV (CSV cache)
+  hourly/                   # 41 assets × ~2y hourly OHLCV
+  BACKTEST_RESULTS/         # Per-asset results tables (daily + hourly)
+  DATA_REFERENCE.md         # Data source documentation
+HOW_IT_WORKS.md             # Core technical breakdown
+ML_PS_Explanation.md        # ML strategy deep-dive
+ADVANCED_TECHNIQUES.md      # Discarded approaches and why
+requirements.txt
 ```
 
-## How It Works
+---
 
-See [HOW_IT_WORKS.md](HOW_IT_WORKS.md) for the full technical breakdown — covers the core insight (why it's hard to beat B&H without leverage), the Peak Shaver approach, and regime detection logic.
+## Tech Stack
+
+`Python 3.10+` · `pandas` · `numpy` · `yfinance` · `xgboost` · `scikit-learn` · `matplotlib` · `streamlit` · `plotly` · `lightweight-charts` (browser viz)
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE).
