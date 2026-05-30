@@ -1,10 +1,10 @@
 # Adaptive Regime-Based Trading Bot
 
-**🏆 1st place — Lancaster University Quant Hackathon (LEFS × FemTech, Feb 2026)**
+**🏆 1st place: Lancaster University Quant Hackathon (LEFS × FemTech, Feb 2026)**
 
-A long-only trading-strategy research project that grows a single idea — *shave the peaks instead of avoiding crashes* — from hand-written rules into an XGBoost / Random-Forest ensemble and a competition-winning submission. Backtested across **41 assets** and **~10 years** of market data under one unified backtester with continuous 0–100% position sizing.
+A long-only trading-strategy research project built around one idea, *shave the peaks instead of avoiding crashes*, taken from hand-written rules to an XGBoost / Random-Forest ensemble and a competition-winning submission. Backtested across **41 assets** and **~10 years** of market data under one unified backtester with continuous 0-100% position sizing.
 
-> **The one idea.** Without leverage you can't beat Buy & Hold by sitting in cash — every day out of the market is compounding drag. So instead of *avoiding crashes*, **shave the peaks**: stay ~100% invested by default and trim only at statistically stretched, overbought extremes that tend to mean-revert.
+> **The one idea.** Without leverage you can't beat Buy & Hold by sitting in cash. Every day out of the market is compounding drag. So instead of *avoiding crashes*, **shave the peaks**: stay ~100% invested by default and trim only at statistically stretched, overbought extremes that tend to mean-revert.
 
 ![SPY strategy lineage vs Buy & Hold](backtest_results.png)
 
@@ -16,13 +16,13 @@ A long-only trading-strategy research project that grows a single idea — *shav
 
 ![Strategy comparison across 41 assets](cross_asset_results.png)
 
-| Strategy | Type | Beats B&H — daily (10y) | Beats B&H — hourly (2y) | Median return (daily) |
+| Strategy | Type | Beats B&H (daily, 10y) | Beats B&H (hourly, 2y) | Median return (daily) |
 |:---------|:-----|:-----------------------:|:-----------------------:|:---------------------:|
 | Peak Shaver v1 | Rule-based | 28/41 (68%) | 24/41 (59%) | +177% |
 | **Peak Shaver v2** | Rule-based | **32/41 (78%)** | 20/41 (49%) | +188% |
 | ML Peak Shaver v2 | XGB + RF | 30/41 (73%) | 19/41 (46%) | +185% |
 | **ML v3 Return Maximizer** | XGB + RF | 26/41 (63%) | **30/41 (73%)** | **+268%** |
-| Buy & Hold | — | — | — | +183% |
+| Buy & Hold | n/a | n/a | n/a | +183% |
 
 Two complementary winners: **Peak Shaver v2 is the most _consistent_** (beats Buy & Hold 78% of the time on daily data), while **ML v3 is the highest _returning_** (best median return, and the single best strategy on 25 of 41 assets). Full per-asset breakdown: [`DAILY.md`](test_data/BACKTEST_RESULTS/DAILY.md) · [`HOURLY.md`](test_data/BACKTEST_RESULTS/HOURLY.md).
 
@@ -30,7 +30,7 @@ Two complementary winners: **Peak Shaver v2 is the most _consistent_** (beats Bu
 
 ## Core insight
 
-Traditional active strategies are binary — 100% invested or 100% cash. In a 10-year bull market, every day in cash compounds against you, and missing the 10 best days roughly halves total returns — and the best days cluster right after the worst, so exiting during a crash forfeits the recovery.
+Traditional active strategies are binary: 100% invested or 100% cash. In a 10-year bull market, every day in cash compounds against you, and missing the 10 best days roughly halves total returns. Those best days cluster right after the worst, so exiting during a crash forfeits the recovery.
 
 So we don't try to avoid crashes. We **shave peaks**: stay 100% invested by default, trim exposure only when multiple overbought signals fire at once, and snap back to full exposure fast. Full reasoning and a worked example in **[HOW_IT_WORKS.md](HOW_IT_WORKS.md)**.
 
@@ -48,7 +48,7 @@ The repo captures the idea evolving from hand-written rules to a learned model:
 | **ML v3** | `ml_peak_shaver_v3.py` | Every-bar return prediction → position sizing; 37 features, bullish-bias threshold |
 | Hackathon Sharpe | `trading_bot.py` | Discrete `{-1, 0, 1}` variant tuned for the competition's Sharpe-ranked, next-day, 5bps eval |
 
-Deep dive on the ML models in **[ML_PS_Explanation.md](ML_PS_Explanation.md)**; discarded approaches and why in **[ADVANCED_TECHNIQUES.md](ADVANCED_TECHNIQUES.md)**. Earlier binary in/out strategies (SMA-200, Dual-MA, Momentum, Crash-Avoidance, Volume-Trend, Ensemble) were dropped from the bot — they beat Buy & Hold on far fewer assets — but remain explorable in the interactive visualizer for comparison.
+Deep dive on the ML models in **[ML_PS_Explanation.md](ML_PS_Explanation.md)**; discarded approaches and why in **[ADVANCED_TECHNIQUES.md](ADVANCED_TECHNIQUES.md)**. Earlier binary in/out strategies (SMA-200, Dual-MA, Momentum, Crash-Avoidance, Volume-Trend, Ensemble) were dropped from the bot because they beat Buy & Hold on far fewer assets, but they remain explorable in the interactive visualizer for comparison.
 
 ---
 
@@ -58,7 +58,7 @@ The competition entry loads a pretrained XGBoost + RandomForest ensemble (`model
 
 ![Submission equity curve](hackathon_repo/results/equity_curve_SPY.png)
 
-| Metric | Value (provided SPY series, 2015–2026) |
+| Metric | Value (provided SPY series, 2015-2026) |
 |:-------|:--------------------------------------:|
 | Sharpe ratio (ranking metric) | **0.61** |
 | Total return | +93.5% |
@@ -76,23 +76,23 @@ Because the contest ranks by **Sharpe**, the submission targets smoother, risk-a
 pip install -r requirements.txt
 ```
 
-**Interactive CLI** — run any strategy on any asset:
+**Interactive CLI.** Run any strategy on any asset:
 ```bash
 python trading_bot.py
 ```
 
-**Streamlit terminal dashboard** — Bloomberg/TradingView-style demo:
+**Streamlit terminal dashboard.** Bloomberg/TradingView-style demo:
 ```bash
 streamlit run dashboard.py
 ```
 
-**Browser visualizer** — scrub through the strategy bar-by-bar (serve from the repo root; opening the file directly won't load the data):
+**Browser visualizer.** Scrub through the strategy bar-by-bar (serve from the repo root; opening the file directly won't load the data):
 ```bash
 python -m http.server 8000
 # then open http://localhost:8000/viz/index.html
 ```
 
-**Reproduce all results + the charts above** (trains the ML models, ~3–5 min):
+**Reproduce all results + the charts above** (trains the ML models, ~3-5 min):
 ```bash
 python run_full_backtest.py     # writes test_data/BACKTEST_RESULTS/{DAILY,HOURLY}.md + both PNGs
 ```
@@ -108,8 +108,8 @@ cd hackathon_repo && python test.py
 
 ```
 trading_bot.py              # Core: indicators, Peak Shaver v1/v2, Hackathon Sharpe, backtester, CLI
-ml_peak_shaver_v2.py        # ML strategy v2 — XGB + RF, multi-horizon labels
-ml_peak_shaver_v3.py        # ML strategy v3 — every-bar return prediction
+ml_peak_shaver_v2.py        # ML strategy v2: XGB + RF, multi-horizon labels
+ml_peak_shaver_v3.py        # ML strategy v3: every-bar return prediction
 dashboard.py                # Streamlit terminal-style demo
 run_full_backtest.py        # Regenerates the results tables + both README charts
 download_extra_tickers.py   # Fetches extra tickers used only as ML training data
@@ -144,4 +144,4 @@ hackathon_ref/              # Untouched copy of the organizer's original 3 files
 
 ## License
 
-MIT — see [LICENSE](LICENSE). These are historical backtests for research and education, **not investment advice**; past performance does not predict future results.
+MIT. See [LICENSE](LICENSE). These are historical backtests for research and education, **not investment advice**; past performance does not predict future results.

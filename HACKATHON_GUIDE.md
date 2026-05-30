@@ -1,4 +1,4 @@
-# LEFS Quant Hackathon — Full Guide
+# LEFS Quant Hackathon: Full Guide
 
 ## TL;DR
 
@@ -15,7 +15,7 @@ Only 3 files from the organizers:
 ```
 hackathon_repo/
 ├── README.md              # Official rules & submission instructions
-├── test.py                # EVALUATION SCRIPT — organizers run this to score you
+├── test.py                # EVALUATION SCRIPT, organizers run this to score you
 └── utilities.py           # Downloads training data (SPY + QQQ 2015-2026)
 ```
 
@@ -23,7 +23,7 @@ hackathon_repo/
 
 ```
 hackathon_repo/
-├── validate.py            # Local backtester — tests on SPY/QQQ/XOM, compares vs B&H
+├── validate.py            # Local backtester, tests on SPY/QQQ/XOM, compares vs B&H
 ├── tune.py                # Parameter sweep for peak shaver thresholds
 ├── tune_shorts.py         # Tests shorting variants across 41 daily assets
 ├── run_full_backtest.py   # Full 41-asset backtest suite, outputs markdown
@@ -64,12 +64,12 @@ old/                       # Archived pre-hackathon work (viz, screenshots, docs
 
 ## File-by-File Explanation
 
-### `test.py` — The Evaluation Script (MOST IMPORTANT)
+### `test.py`: The Evaluation Script (MOST IMPORTANT)
 
 This is what the organizers run to score your submission. Understanding it is critical.
 
 **What it does:**
-1. Loads a **hidden test CSV** (not SPY/QQQ — it's `data/exxonmobil_xom.csv` in the default, but they'll swap it for unseen data)
+1. Loads a **hidden test CSV** (not SPY/QQQ, it's `data/exxonmobil_xom.csv` in the default, but they'll swap it for unseen data)
 2. Dynamically imports your `submissions/strategy.py`
 3. Calls `generate_signals(data)` and times it (must finish in <10s)
 4. Validates output: must be a `pd.Series` of `{-1, 0, 1}`, same index as data, no NaNs
@@ -77,9 +77,9 @@ This is what the organizers run to score your submission. Understanding it is cr
 6. Computes metrics and writes `results/results.json`
 
 **Key constants:**
-- `TRADING_DAYS = 252` — annualization factor
-- `TRANSACTION_COST = 0.0005` — 5 basis points per trade (each position change)
-- `MAX_SIGNAL_TIME_SEC = 10` — strategy timeout
+- `TRADING_DAYS = 252`: annualization factor
+- `TRANSACTION_COST = 0.0005`: 5 basis points per trade (each position change)
+- `MAX_SIGNAL_TIME_SEC = 10`: strategy timeout
 
 **Backtest logic (exact):**
 ```python
@@ -94,12 +94,12 @@ strategy_returns = shifted * returns - costs
 |--------|---------|
 | Total Return | `(1 + returns).prod() - 1` |
 | Annual Return | Compounded annualized |
-| **Sharpe Ratio** | `(mean / std) * sqrt(252)` — **primary ranking** |
+| **Sharpe Ratio** | `(mean / std) * sqrt(252)`, **primary ranking** |
 | Max Drawdown | Worst peak-to-trough on equity curve |
 | Calmar Ratio | Annual return / abs(max drawdown) |
 | Win Rate | % of positive-return days |
 
-### `utilities.py` — Data Downloader
+### `utilities.py`: Data Downloader
 
 Downloads SPY + QQQ (2015-2026) via yfinance, saves to `data/training_data_multi.csv`. Multi-ticker format with multi-level column headers.
 
@@ -109,7 +109,7 @@ cd hackathon_repo
 python -c "from utilities import download_hackathon_data; download_hackathon_data()"
 ```
 
-### `validate.py` — Local Backtester
+### `validate.py`: Local Backtester
 
 Like `test.py` but runs on multiple tickers (SPY, QQQ, XOM) and shows comparison vs buy-and-hold. Good for quick local testing.
 
@@ -128,7 +128,7 @@ QQQ        0.78    +512.0%   -42.1%     156 |       0.71    +480.2%
 XOM        0.31     +88.4%   -55.2%     198 |       0.25     +62.1%
 ```
 
-### `tune.py` — Parameter Sweeper
+### `tune.py`: Parameter Sweeper
 
 Sweeps combinations of thresholds (RSI, ROC, Z-score, vol, shorting, hold period) across SPY/QQQ/XOM. Reports Sharpe for each config.
 
@@ -138,7 +138,7 @@ cd hackathon_repo
 python tune.py
 ```
 
-### `tune_shorts.py` — Shorting Variant Tester
+### `tune_shorts.py`: Shorting Variant Tester
 
 Tests whether shorting during bearish/vol/blowoff regimes helps or hurts across all 41 daily assets. Requires `test_data/daily/` to exist.
 
@@ -148,7 +148,7 @@ cd hackathon_repo
 python tune_shorts.py
 ```
 
-### `run_full_backtest.py` — Full 41-Asset Suite
+### `run_full_backtest.py`: Full 41-Asset Suite
 
 Runs strategy on all 41 assets (daily + hourly), outputs markdown tables to `test_data/BACKTEST_RESULTS/`. Mirrors `test.py` eval logic exactly.
 
@@ -158,7 +158,7 @@ cd hackathon_repo
 python run_full_backtest.py
 ```
 
-### `submissions/strategy.py` — Your Strategy
+### `submissions/strategy.py`: Your Strategy
 
 The only file the organizers care about. Must export one function:
 
@@ -210,7 +210,7 @@ def generate_signals(data: pd.DataFrame) -> pd.Series:
     return pd.Series(1, index=data.index)  # always long
 ```
 
-More realistic — SMA crossover:
+More realistic, an SMA crossover:
 
 ```python
 import pandas as pd
@@ -242,14 +242,14 @@ hackathon_repo/
 ### Workflow
 
 ```bash
-# Strategy A — conservative
+# Strategy A: conservative
 git checkout -b team-alpha-conservative
 # edit submissions/strategy.py with conservative strategy
 git add submissions/strategy.py
 git commit -m "team-alpha conservative"
 git push origin team-alpha-conservative
 
-# Strategy B — aggressive
+# Strategy B: aggressive
 git checkout -b team-alpha-aggressive
 # edit submissions/strategy.py with aggressive strategy
 git add submissions/strategy.py
@@ -257,7 +257,7 @@ git commit -m "team-alpha aggressive"
 git push origin team-alpha-aggressive
 ```
 
-Each branch has its own `submissions/strategy.py`. The organizers evaluate whichever branch you tell them is your final submission (typically one per team — check with organizers if multiple are allowed).
+Each branch has its own `submissions/strategy.py`. The organizers evaluate whichever branch you tell them is your final submission (typically one per team, check with organizers if multiple are allowed).
 
 ### How it looks in git
 

@@ -38,8 +38,8 @@ The compounding problem (SPY over 10 years):
   │  Missing just 10 of the best trading days out of 2,520    │
   │  over 10 years cuts your returns by MORE THAN HALF.       │
   │                                                           │
-  │  The best days often happen right after the worst days    │
-  │  — so exiting during crashes means missing the recovery.  │
+  │  The best days often happen right after the worst days,   │
+  │  so exiting during crashes means missing the recovery.    │
   └────────────────────────────────────────────────────────────┘
 ```
 
@@ -76,7 +76,7 @@ By reducing position at these peaks, we capture small but consistent alpha.
   └─────────────────────────┘            └─────────────────────────┘
 ```
 
-## How It Works — Three Signals (Triple Confirmation)
+## How It Works: Three Signals (Triple Confirmation)
 
 v2 adds Z-score as a third confirmation signal. This filters out bad trims
 where RSI is overbought but price isn't statistically stretched from its mean.
@@ -99,7 +99,7 @@ where RSI is overbought but price isn't statistically stretched from its mean.
   This prevents trimming during steady trends where RSI stays high
   but price isn't far from its trend line (e.g., JNJ, DIA, JPM).
 
-  For deep trim (Tier 2): Z-score > 3.0 required — only at genuine
+  For deep trim (Tier 2): Z-score > 3.0 required, only at genuine
   blow-off tops (3+ std devs above mean).
 ```
 
@@ -113,7 +113,7 @@ where RSI is overbought but price isn't statistically stretched from its mean.
   │  ELIF RSI > 75 AND ROC(21) > 11% AND Z-score > 1.0:            │
   │      position = 40%    (overbought + momentum + stretched)       │
   │  ELSE:                                                           │
-  │      position = 100%   (normal — fully invested)                 │
+  │      position = 100%   (normal, fully invested)                  │
   │                                                                  │
   │  Timeframe-adaptive: periods auto-scale for hourly/daily bars.   │
   │                                                                  │
@@ -261,10 +261,10 @@ Peak Shaver has two rule-based tiers, plus ML and competition variants:
 |:---------|:-----|:-------------|
 | Peak Shaver v1 | `strategy_peak_shaver_v1` | RSI + ROC trim only |
 | **Peak Shaver v2** | `strategy_peak_shaver` | v1 + the Z-score gate described above |
-| ML Peak Shaver v2/v3 | `ml_peak_shaver_v2.py`, `ml_peak_shaver_v3.py` | Learn *when* to override the rule-based trims — see [ML_PS_Explanation.md](ML_PS_Explanation.md) |
+| ML Peak Shaver v2/v3 | `ml_peak_shaver_v2.py`, `ml_peak_shaver_v3.py` | Learn *when* to override the rule-based trims, see [ML_PS_Explanation.md](ML_PS_Explanation.md) |
 | Hackathon Sharpe | `strategy_hackathon_sharpe` | Discrete `{-1, 0, 1}` variant for the competition's next-day, 5bps backtest |
 
-> **Note:** earlier binary in/out strategies (SMA-200, Dual-MA, Momentum, Crash-Avoidance, Volume-Trend, Ensemble) were removed. Each beat Buy & Hold on far fewer assets (the best, the Ensemble, only ~8/41) because time spent in cash is pure drag — the core insight at the top of this doc.
+> **Note:** earlier binary in/out strategies (SMA-200, Dual-MA, Momentum, Crash-Avoidance, Volume-Trend, Ensemble) were removed. Each beat Buy & Hold on far fewer assets (the best, the Ensemble, only ~8/41) because time spent in cash is pure drag, the core insight at the top of this doc.
 
 ---
 
@@ -281,7 +281,7 @@ Peak Shaver has two rule-based tiers, plus ML and competition variants:
 | SMA / EMA | Moving averages (trend, slopes) | Hackathon Sharpe, ML features |
 | ATR(14) | Average True Range (volatility) | Hackathon Sharpe, ML features |
 | OBV / CMF | Volume-flow indicators | ML features |
-| MACD, Bollinger, etc. | Momentum / volatility bands | ML features (36–37 total) |
+| MACD, Bollinger, etc. | Momentum / volatility bands | ML features (36-37 total) |
 
 ## Backtester Modes
 

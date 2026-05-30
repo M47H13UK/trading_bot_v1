@@ -1,4 +1,4 @@
-# Advanced Techniques — Beyond Long-Only
+# Advanced Techniques: Beyond Long-Only
 
 Reference doc for hackathon (Feb 22, 2026). Current bot is long-only, 0-100% position, no derivatives. This covers what's possible if rules allow more.
 
@@ -10,13 +10,13 @@ Our Peak Shaver:
 - **Long-only**: can hold 0% to 100%, never short
 - **No leverage**: max exposure = 1x capital
 - **Position range**: 100% default, reduces to 50% (RSI>75 + ROC>11%) or 30% (RSI>85)
-- **Alpha ceiling**: at best, we avoid some downside — can't profit from drops
+- **Alpha ceiling**: at best, we avoid some downside, can't profit from drops
 
 Result: beats B&H on 28/41 assets (68%), but alpha is modest (median +4.1%). The big losses come from parabolic assets (BTC -12,180%, TSLA -2,125%) where shaving peaks costs us continuation gains.
 
 ---
 
-## 2. Leverage — Amplifying Alpha
+## 2. Leverage: Amplifying Alpha
 
 ### The Idea
 
@@ -38,7 +38,7 @@ With 2x leverage:
   Extreme:    60% invested   (0.6x exposure)
 ```
 
-At 2x, our "reduced" position during peaks is still 100% — we're not missing rallies, just deleveraging. This is far safer than 2x B&H which stays at 2x through crashes.
+At 2x, our "reduced" position during peaks is still 100%, so we're not missing rallies, just deleveraging. This is far safer than 2x B&H, which stays at 2x through crashes.
 
 ### Concrete Example: SPY
 
@@ -68,7 +68,7 @@ For SPY-like assets: Kelly suggests ~1.5-2.0x is optimal
 For crypto: Kelly suggests <1x (high variance destroys leveraged positions)
 ```
 
-**Key rule**: never go full Kelly — use half-Kelly (0.75-1.0x) to survive variance.
+**Key rule**: never go full Kelly, use half-Kelly (0.75-1.0x) to survive variance.
 
 ### Risks
 
@@ -79,7 +79,7 @@ For crypto: Kelly suggests <1x (high variance destroys leveraged positions)
 
 ---
 
-## 3. Shorting — Profiting from Peaks
+## 3. Shorting: Profiting from Peaks
 
 ### The Idea
 
@@ -139,16 +139,16 @@ Peak Shaver backtests show XLK (+696.6%) massively outperforms SPY (+321.8%). A 
 Position spectrum: -1x ──────── 0x ──────── +1x ──────── +2x
 
 Peak Shaver with full toolkit:
-  RSI < 30 (oversold):        +2.0x  (leveraged long — buying the dip)
+  RSI < 30 (oversold):        +2.0x  (leveraged long, buying the dip)
   RSI 30-75 (normal):         +1.5x  (moderate leverage)
-  RSI > 75, ROC > 11%:        -0.5x  (short — profiting from pullback)
-  RSI > 85:                   -1.0x  (full short — extreme overbought)
+  RSI > 75, ROC > 11%:        -0.5x  (short, profiting from pullback)
+  RSI > 85:                   -1.0x  (full short, extreme overbought)
 ```
 
 ### Impact on Our Backtest Numbers
 
 ```
-SPY example — estimated with leverage + shorting:
+SPY example, estimated with leverage + shorting:
 
   Strategy             Return    Max Drawdown
   ─────────────────────────────────────────────
@@ -176,7 +176,7 @@ The short leg acts as a natural hedge: when markets drop, our short profits offs
 ### Options
 
 - **Protective puts**: buy puts when RSI>75 instead of reducing position. Keeps upside if rally continues, limits downside
-- **Covered calls**: sell calls at peak signals — collect premium, cap upside (which we expect to be limited anyway)
+- **Covered calls**: sell calls at peak signals, collect premium, cap upside (which we expect to be limited anyway)
 - **Straddles**: buy both calls and puts before high-volatility events. Profit from big moves in either direction
 - **Cost**: options premium is the drag. Works best when volatility is underpriced
 
@@ -185,7 +185,7 @@ The short leg acts as a natural hedge: when markets drop, our short profits offs
 - Cointegrated pairs (e.g., XOM/CVX, MSFT/AAPL) mean-revert relative to each other
 - Z-score of spread triggers entries: long the underperformer, short the overperformer
 - Market-neutral: no directional exposure, pure alpha
-- Our backtest data shows many sector ETFs track closely — good candidates
+- Our backtest data shows many sector ETFs track closely, good candidates
 
 ### ML/RL-Based Signal Generation
 
@@ -206,21 +206,21 @@ The short leg acts as a natural hedge: when markets drop, our short profits offs
 - **Order book imbalance**: bid/ask volume ratio predicts short-term direction
 - **VWAP/TWAP**: execution algorithms that minimize market impact
 - **Tick data**: sub-second patterns in trade flow
-- **Not relevant for hackathon** — requires low-latency infrastructure and tick data
+- **Not relevant for hackathon**: requires low-latency infrastructure and tick data
 
 ### Portfolio Optimization
 
 - **Mean-variance (Markowitz)**: optimal allocation across multiple assets given expected returns and covariance
-- **Risk parity**: weight assets by inverse volatility — equal risk contribution
+- **Risk parity**: weight assets by inverse volatility, equal risk contribution
 - **Black-Litterman**: combine market equilibrium with our Peak Shaver views
-- **Relevant if hackathon provides multiple assets** — optimize allocation, not just per-asset signals
+- **Relevant if hackathon provides multiple assets**: optimize allocation, not just per-asset signals
 
 ### Alternative Data
 
 - **Satellite imagery**: parking lot counts, shipping traffic, crop health
 - **Credit card transaction data**: real-time revenue estimates
 - **Patent filings, job postings**: leading indicators of company direction
-- **Not hackathon-relevant** — requires expensive data subscriptions
+- **Not hackathon-relevant**: requires expensive data subscriptions
 
 ---
 
@@ -234,14 +234,14 @@ The short leg acts as a natural hedge: when markets drop, our short profits offs
 5. Is there a margin system or just a leverage multiplier?
 
 ### Data & Assets
-6. What data is provided — OHLCV? Tick data? Fundamentals?
+6. What data is provided: OHLCV? Tick data? Fundamentals?
 7. Single asset or multiple assets to trade?
 8. If multiple, can we go long one and short another (pairs)?
 9. Can we use external data (APIs, web scraping) or only provided data?
-10. What timeframe — daily bars? Intraday?
+10. What timeframe: daily bars? Intraday?
 
 ### Evaluation Criteria
-11. What's the primary metric — total return, Sharpe, or something else?
+11. What's the primary metric: total return, Sharpe, or something else?
 12. Are there risk constraints (max drawdown limit, VaR)?
 13. Is there a penalty for high turnover or excessive trading?
 14. Is risk-adjusted return weighted (Sharpe, Sortino, Calmar)?
@@ -250,13 +250,13 @@ The short leg acts as a natural hedge: when markets drop, our short profits offs
 ### Execution Rules
 16. What commission/fee per trade?
 17. Is slippage modeled?
-18. How often can we rebalance — every bar? Daily? Weekly?
+18. How often can we rebalance: every bar? Daily? Weekly?
 19. Is there a minimum holding period?
 20. Do we start with a fixed capital amount?
 
 ### Technical
 21. What programming languages/libraries are allowed?
 22. Is there a compute time limit for backtests?
-23. What's the submission format — code file, CSV of trades, or live API?
+23. What's the submission format: code file, CSV of trades, or live API?
 24. Can we use pre-trained ML models or must everything train on provided data?
 25. Is there internet access during the hackathon?
