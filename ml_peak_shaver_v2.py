@@ -455,12 +455,20 @@ def strategy_ml_peak_shaver(df, models, asset_category=None, cold_start_bars=504
 # =============================================================================
 
 def _load_all_assets(data_dir):
-    """Load all CSVs from a directory. Returns list of (stem, name, category, df)."""
+    """Load the curated benchmark assets from a directory.
+
+    Returns list of (stem, name, category, df). Only the 41 curated tickers in
+    TICKER_INFO are used for backtests and ML training, so results stay
+    reproducible regardless of any extra ticker CSVs present in the folder
+    (those extras are kept only as additional ML training data).
+    """
     csv_files = sorted(Path(data_dir).glob("*.csv"))
     assets = []
     for f in csv_files:
         stem = f.stem
-        name, category = TICKER_INFO.get(stem, (stem, "Other"))
+        if stem not in TICKER_INFO:
+            continue  # skip non-benchmark tickers (extra training-only data)
+        name, category = TICKER_INFO[stem]
         try:
             df = load_csv_data(str(f))
             if len(df) >= 100:

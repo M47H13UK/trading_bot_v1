@@ -2,7 +2,7 @@
 Peak Shaver | Quantitative Trading Terminal
 ============================================
 Bloomberg/TradingView-style dark terminal for hackathon demo.
-Imports strategies from trading_bot.py + ml_peak_shaver.py.
+Imports strategies from trading_bot.py + ml_peak_shaver_v2.py.
 
 Run:  streamlit run dashboard.py
 """
@@ -147,26 +147,132 @@ DARK_CSS = """
     footer {visibility: hidden;}
     header {visibility: hidden;}
 
-    /* Skeleton shimmer instead of default fade on rerun */
+    /* ═══ Skeleton Loading: hide stale data, show grey placeholders ═══ */
+
+    /* Kill default Streamlit fade */
     [data-stale="true"] {
         opacity: 1 !important;
     }
-    [data-stale="true"] > div {
+
+    /* ── Charts: overlay dark skeleton with grid lines + shimmer ── */
+    [data-stale="true"] [data-testid="stPlotlyChart"] {
         position: relative;
         overflow: hidden;
+        border-radius: 8px;
     }
-    [data-stale="true"] > div::after {
+    [data-stale="true"] [data-testid="stPlotlyChart"]::before {
         content: "";
         position: absolute;
-        top: 0; left: -100%; width: 100%; height: 100%;
-        background: linear-gradient(90deg, transparent 0%, rgba(88,166,255,0.07) 40%, rgba(88,166,255,0.12) 50%, rgba(88,166,255,0.07) 60%, transparent 100%);
-        animation: skeleton-shimmer 1.5s ease-in-out infinite;
-        pointer-events: none;
-        z-index: 999;
+        inset: 0;
+        z-index: 900;
+        border-radius: 8px;
+        border: 1px solid #1e2d3d;
+        background:
+            /* faint horizontal grid lines */
+            repeating-linear-gradient(
+                to bottom,
+                transparent 0px, transparent 47px,
+                #1a2332 47px, #1a2332 48px
+            ),
+            /* faint vertical grid lines */
+            repeating-linear-gradient(
+                to right,
+                transparent 0px, transparent 119px,
+                #1a2332 119px, #1a2332 120px
+            ),
+            #0d1117;
     }
-    @keyframes skeleton-shimmer {
-        0% { left: -100%; }
-        100% { left: 100%; }
+    [data-stale="true"] [data-testid="stPlotlyChart"]::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 901;
+        border-radius: 8px;
+        background: linear-gradient(
+            90deg,
+            transparent 0%,
+            rgba(30, 45, 61, 0.45) 45%,
+            rgba(45, 65, 85, 0.5) 50%,
+            rgba(30, 45, 61, 0.45) 55%,
+            transparent 100%
+        );
+        background-size: 200% 100%;
+        animation: skel-shimmer 1.8s ease-in-out infinite;
+        pointer-events: none;
+    }
+
+    /* ── Metric cards: blank out numbers, show grey bars ── */
+    [data-stale="true"] [data-testid="stMetricValue"] > div {
+        color: transparent !important;
+        background: #1e2d3d !important;
+        border-radius: 4px;
+        animation: skel-pulse 1.8s ease-in-out infinite;
+    }
+    [data-stale="true"] [data-testid="stMetricDelta"] > div {
+        color: transparent !important;
+        background: #161b22 !important;
+        border-radius: 4px;
+        animation: skel-pulse 1.8s ease-in-out infinite 0.2s;
+    }
+
+    /* ── Dataframes: overlay skeleton ── */
+    [data-stale="true"] [data-testid="stDataFrame"] {
+        position: relative;
+        overflow: hidden;
+        border-radius: 8px;
+    }
+    [data-stale="true"] [data-testid="stDataFrame"]::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 900;
+        border-radius: 8px;
+        border: 1px solid #1e2d3d;
+        background:
+            repeating-linear-gradient(
+                to bottom,
+                transparent 0px, transparent 35px,
+                #1a2332 35px, #1a2332 36px
+            ),
+            #0d1117;
+    }
+    [data-stale="true"] [data-testid="stDataFrame"]::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 901;
+        border-radius: 8px;
+        background: linear-gradient(
+            90deg,
+            transparent 0%,
+            rgba(30, 45, 61, 0.45) 45%,
+            rgba(45, 65, 85, 0.5) 50%,
+            rgba(30, 45, 61, 0.45) 55%,
+            transparent 100%
+        );
+        background-size: 200% 100%;
+        animation: skel-shimmer 1.8s ease-in-out infinite;
+        pointer-events: none;
+    }
+
+    /* ── Markdown headings: subtle pulse ── */
+    [data-stale="true"] [data-testid="stMarkdown"] h4,
+    [data-stale="true"] [data-testid="stMarkdown"] h3 {
+        color: transparent !important;
+        background: #1e2d3d;
+        border-radius: 4px;
+        display: inline-block;
+        min-width: 180px;
+        animation: skel-pulse 1.8s ease-in-out infinite;
+    }
+
+    @keyframes skel-shimmer {
+        0%   { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+    @keyframes skel-pulse {
+        0%, 100% { opacity: 0.35; }
+        50%      { opacity: 0.7; }
     }
 </style>
 """

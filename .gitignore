@@ -8,3 +8,6 @@ venv/
 dist/
 build/
 .DS_Store
+
+# Local-only event screenshots (kept off GitHub — contain third-party names)
+event_info/

@@ -1,0 +1,59 @@
+# LEFS Quant Hackathon
+
+Build a trading strategy. Best performance. You may integrate machine learning and a graphical user interface to your trading bot. This will significantly help your chances in winning.
+
+## What to do
+
+1. Write your strategy in `submissions/strategy.py`
+2. Your file must have one function:
+
+```python
+def generate_signals(data: pd.DataFrame) -> pd.Series:
+```
+
+3. `data` is a DataFrame with columns: `Open`, `High`, `Low`, `Close`, `Volume`
+4. Return a Series with the same index as `data`, containing only `-1`, `0`, or `1`
+   - `1` = buy / long
+   - `0` = hold / flat
+   - `-1` = sell / short
+
+## Training data
+
+Use `utilites.py` to download historical training data (SPY and QQQ from 2015–2026):
+
+```bash
+python -c "from utilites import download_hackathon_data; download_hackathon_data()"
+```
+
+This saves `data/training_data_multi.csv` which you can use to develop and train your strategy. Your strategy will be evaluated on separate unseen data.
+
+## How to submit
+
+1. Create a branch with your team name:
+
+```bash
+git checkout -b your-team-name
+```
+
+2. Add your code and push:
+
+```bash
+git add .
+git commit -m "your-team-name submission"
+git push origin your-team-name
+```
+
+## Rules
+- No NaNs in your output
+- Signal index must match the data index exactly
+- Do not push to `main` — only push to your team branch
+
+## Scoring
+
+| Metric | Description |
+|--------|-------------|
+| Sharpe Ratio | Risk-adjusted return (primary ranking) |
+| Total Return | Cumulative return over the period |
+| Max Drawdown | Worst peak-to-trough decline |
+| Calmar Ratio | Annual return / max drawdown |
+| Win Rate | % of profitable days |

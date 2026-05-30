@@ -253,29 +253,18 @@ Visualized over time:
 
 ---
 
-# The 5 Sub-Strategies (Alternatives)
+# Related Strategies in This Repo
 
-These are included for comparison. Each uses a different approach.
-None beat B&H consistently alone, but they provide different perspectives.
+Peak Shaver has two rule-based tiers, plus ML and competition variants:
 
-## 1. SMA(200) Trend — Faber Timing Model
-Long when price > 200-day SMA. 3-day confirmation filter. ~75% invested.
+| Strategy | Code | What it does |
+|:---------|:-----|:-------------|
+| Peak Shaver v1 | `strategy_peak_shaver_v1` | RSI + ROC trim only |
+| **Peak Shaver v2** | `strategy_peak_shaver` | v1 + the Z-score gate described above |
+| ML Peak Shaver v2/v3 | `ml_peak_shaver_v2.py`, `ml_peak_shaver_v3.py` | Learn *when* to override the rule-based trims — see [ML_PS_Explanation.md](ML_PS_Explanation.md) |
+| Hackathon Sharpe | `strategy_hackathon_sharpe` | Discrete `{-1, 0, 1}` variant for the competition's next-day, 5bps backtest |
 
-## 2. Dual MA (50/200) — Golden/Death Cross
-Long when SMA(50) > SMA(200) * 1.01. 1% band filter. ~70% invested.
-
-## 3. Momentum Composite — Multi-Timeframe Vote
-Invests when 2+ of 3 timeframes (1/3/12-month ROC) are positive. ~70% invested.
-
-## 4. Crash Avoidance — Default Invested
-Always in. Exits only when 3/4 crash signals fire. ~90-95% invested.
-
-## 5. Volume Trend — Dual Confirmation
-Price + OBV must both confirm. Exits when both break down. ~80% invested.
-
-## Master Ensemble — Binary Committee Vote
-Majority vote of all 5 sub-strategies. Enter at 3+, exit at <=1. Hysteresis.
-Beats B&H on only 8/41 assets — the binary in/out problem persists.
+> **Note:** earlier binary in/out strategies (SMA-200, Dual-MA, Momentum, Crash-Avoidance, Volume-Trend, Ensemble) were removed. Each beat Buy & Hold on far fewer assets (the best, the Ensemble, only ~8/41) because time spent in cash is pure drag — the core insight at the top of this doc.
 
 ---
 
@@ -285,21 +274,21 @@ Beats B&H on only 8/41 assets — the binary in/out problem persists.
 
 | Indicator | Function | Used By |
 |:----------|:---------|:--------|
-| RSI(14) | Overbought/oversold oscillator, 0-100 | **Peak Shaver v2**, Crash Avoidance |
-| ROC(21) | 21-day Rate of Change (1-month momentum) | **Peak Shaver v2**, Momentum Composite |
-| Z-score(50) | Std devs above 50-day mean (statistical stretch) | **Peak Shaver v2** |
-| SMA(N) | Simple Moving Average | SMA200 Trend, Dual MA, Crash Avoidance |
-| EMA(N) | Exponential Moving Average | Volume Trend |
-| ATR(14) | Average True Range (volatility) | Crash Avoidance |
-| OBV | On-Balance Volume | Volume Trend |
-| ROC(63/252) | 3/12-month Rate of Change | Momentum Composite |
+| RSI(14) | Overbought/oversold oscillator, 0-100 | **Peak Shaver v2**, Hackathon Sharpe, ML features |
+| ROC(21) | 21-day Rate of Change (1-month momentum) | **Peak Shaver v2**, ML features |
+| Z-score(50) | Std devs above 50-day mean (statistical stretch) | **Peak Shaver v2**, Hackathon Sharpe, ML features |
+| ADX(14) | Trend strength / regime | Hackathon Sharpe, ML features |
+| SMA / EMA | Moving averages (trend, slopes) | Hackathon Sharpe, ML features |
+| ATR(14) | Average True Range (volatility) | Hackathon Sharpe, ML features |
+| OBV / CMF | Volume-flow indicators | ML features |
+| MACD, Bollinger, etc. | Momentum / volatility bands | ML features (36–37 total) |
 
 ## Backtester Modes
 
 | Method | Used By | Position Range | Description |
 |:-------|:--------|:--------------|:------------|
-| `run()` | Binary strategies | 0% or 100% | All-in / all-out trades |
-| `run_positions()` | **Peak Shaver v2** | 0% to 100% | Continuous sizing, rebalances on 5%+ drift |
+| `run_positions()` | **Peak Shaver v1/v2, ML v2/v3** | 0% to 100% | Continuous sizing, rebalances on 5%+ drift, 0% commission |
+| `backtest_hackathon()` | Hackathon Sharpe | -1 / 0 / +1 | Discrete signals, next-day execution, 5bps cost (mirrors the competition eval) |
 
 ## Constants
 
@@ -313,18 +302,18 @@ REBALANCE_THRESHOLD = 5%  # Only rebalance when drift exceeds 5%
 
 ```
 trading_bot_v1/
-├── trading_bot.py              ← all code (single file)
-├── backtest_results.png        ← chart output (single asset)
-├── cross_asset_results.png     ← chart output (all 41 assets)
+├── trading_bot.py              ← rule-based Peak Shaver v1/v2 + Hackathon Sharpe + backtester
+├── ml_peak_shaver_v2.py        ← ML Peak Shaver v2 (XGB+RF ensemble)
+├── ml_peak_shaver_v3.py        ← ML v3 Return Maximizer
+├── run_full_backtest.py        ← regenerates the results tables + charts below
+├── backtest_results.png        ← SPY strategy-lineage chart
+├── cross_asset_results.png     ← cross-asset beat-rate + return chart
 ├── test_data/
-│   ├── BACKTEST_RESULTS.md     ← v1 vs v2 daily comparison
-│   ├── daily/                  ← 10yr daily Yahoo Finance data
-│   │   ├── SPY.csv ... (41)
-│   │   └── DATA_REFERENCE.md
-│   └── hourly/                 ← 2yr hourly Yahoo Finance data
-│       ├── SPY.csv ... (41)
-│       ├── DATA_REFERENCE.md
-│       └── BACKTEST_RESULTS.md
-├── CLAUDE.md                   ← hackathon context
-└── HOW_IT_WORKS.md             ← this file
+│   ├── daily/                  ← 10yr daily Yahoo Finance data (41 benchmark + extra training tickers)
+│   ├── hourly/                 ← 2yr hourly data (same tickers)
+│   └── BACKTEST_RESULTS/       ← DAILY.md + HOURLY.md results tables
+├── HOW_IT_WORKS.md             ← this file (rule-based Peak Shaver)
+└── ML_PS_Explanation.md        ← ML v2/v3 deep dive
 ```
+
+> Full project layout (including the hackathon submission) is in the top-level [README.md](README.md).

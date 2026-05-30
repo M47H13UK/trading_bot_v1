@@ -5,6 +5,9 @@ sys.path.insert(0, os.path.dirname(__file__))
 import numpy as np
 import pandas as pd
 from pathlib import Path
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 from trading_bot import (
     strategy_peak_shaver_v1, strategy_peak_shaver,
     Backtester, TICKER_INFO, COMMISSION, TEST_DATA_DIR, HOURLY_DATA_DIR,
@@ -37,6 +40,7 @@ def run_dataset(data_dir, label, timeframe_desc):
 
     assets = _load_all_assets(data_dir)
     results = []
+    curves = {}  # equity/drawdown curves for the representative asset (charts)
 
     for stem, name, category, df in assets:
         bt = Backtester(df, initial_capital=10_000, commission=COMMISSION)
@@ -82,11 +86,24 @@ def run_dataset(data_dir, label, timeframe_desc):
         row["worst_key"] = min(strats, key=strats.get)
         results.append(row)
 
+        # Capture curves for the representative asset (used by README charts)
+        if stem == "SPY":
+            bnh_curve = 10_000 * (df["Close"] / df["Close"].iloc[0])
+            curves = {
+                "index": df.index,
+                "B&H": bnh_curve,
+                "PSv2": r2["equity_curve"],
+                "MLv2": r_ml2["equity_curve"],
+                "MLv3": r_ml3["equity_curve"],
+                "dd_PSv2": r2["drawdown"],
+                "dd_MLv3": r_ml3["drawdown"],
+            }
+
         status = "+" if row["ml3"] > row["ml2"] else "-"
         print(f"  [{status}] {stem:<12} PSv1:{row['psv1']:>+8.1f}  PSv2:{row['psv2']:>+8.1f}  "
               f"MLv2:{row['ml2']:>+8.1f}  MLv3:{row['ml3']:>+8.1f}  B&H:{bnh:>+8.1f}", flush=True)
 
-    return results
+    return results, curves
 
 
 def fmt_cell(val, is_best, is_worst):
@@ -250,18 +267,102 @@ def generate_markdown(results, label, timeframe_desc, n_assets):
     return "\n".join(lines) + "\n"
 
 
+STRAT_COLORS = {
+    "B&H": "#7f8c8d", "PSv1": "#3498db", "PSv2": "#2980b9",
+    "MLv2": "#e67e22", "MLv3": "#27ae60",
+}
+
+
+def save_single_asset_chart(curves, out_path, asset="SPY"):
+    """Equity curves + drawdown for one asset across the strategy lineage."""
+    fig, (ax1, ax2) = plt.subplots(
+        2, 1, figsize=(12, 8), gridspec_kw={"height_ratios": [3, 1], "hspace": 0.25})
+
+    for label in ["B&H", "PSv2", "MLv2", "MLv3"]:
+        series = curves[label]
+        ret = (series.iloc[-1] / series.iloc[0] - 1) * 100
+        style = "--" if label == "B&H" else "-"
+        lw = 1.6 if label == "B&H" else 2.0
+        ax1.plot(curves["index"], series.values, style, linewidth=lw,
+                 color=STRAT_COLORS[label], label=f"{label}  ({ret:+.0f}%)")
+    ax1.set_title(f"{asset}: Strategy Lineage vs Buy & Hold  (daily, 10yr, $10k start, 0% commission)",
+                  fontsize=13, fontweight="bold")
+    ax1.set_ylabel("Portfolio Value ($)")
+    ax1.legend(loc="upper left", frameon=False)
+    ax1.grid(True, alpha=0.25)
+
+    ax2.fill_between(curves["index"], curves["dd_PSv2"] * 100, 0,
+                     color=STRAT_COLORS["PSv2"], alpha=0.35, label="PSv2")
+    ax2.fill_between(curves["index"], curves["dd_MLv3"] * 100, 0,
+                     color=STRAT_COLORS["MLv3"], alpha=0.35, label="MLv3")
+    ax2.set_title("Drawdown", fontsize=11)
+    ax2.set_ylabel("Drawdown (%)")
+    ax2.legend(loc="lower left", frameon=False, fontsize=8)
+    ax2.grid(True, alpha=0.25)
+
+    plt.savefig(out_path, dpi=140, bbox_inches="tight")
+    plt.close()
+    print(f"Wrote {out_path}", flush=True)
+
+
+def save_cross_asset_chart(results, out_path):
+    """Beat-rate and median return per strategy across all benchmark assets."""
+    n = len(results)
+    rdf = pd.DataFrame(results)
+    strat_cols = [("psv1", "PSv1"), ("psv2", "PSv2"), ("ml2", "MLv2"), ("ml3", "MLv3")]
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 6))
+
+    # Panel 1: beats Buy & Hold
+    labels = [lbl for _, lbl in strat_cols]
+    beats = [(rdf[c] > rdf["bnh"]).sum() for c, _ in strat_cols]
+    colors = [STRAT_COLORS[lbl] for lbl in labels]
+    bars = ax1.bar(labels, beats, color=colors, alpha=0.9)
+    ax1.axhline(n / 2, color="#c0392b", linestyle="--", linewidth=1, label="50% (coin flip)")
+    ax1.set_ylim(0, n)
+    ax1.set_ylabel(f"Assets beating Buy & Hold (of {n})")
+    ax1.set_title(f"How often each strategy beats Buy & Hold", fontsize=12, fontweight="bold")
+    for b, v in zip(bars, beats):
+        ax1.text(b.get_x() + b.get_width() / 2, v + 0.4, f"{v}/{n}\n({v/n*100:.0f}%)",
+                 ha="center", va="bottom", fontsize=9)
+    ax1.legend(frameon=False, fontsize=8)
+
+    # Panel 2: median return per strategy vs B&H
+    med = [rdf[c].median() for c, _ in strat_cols] + [rdf["bnh"].median()]
+    med_labels = labels + ["B&H"]
+    med_colors = colors + [STRAT_COLORS["B&H"]]
+    bars2 = ax2.bar(med_labels, med, color=med_colors, alpha=0.9)
+    ax2.set_ylabel("Median total return (%)")
+    ax2.set_title("Median return across all benchmark assets", fontsize=12, fontweight="bold")
+    for b, v in zip(bars2, med):
+        ax2.text(b.get_x() + b.get_width() / 2, v + 2, f"+{v:.0f}%",
+                 ha="center", va="bottom", fontsize=9)
+    ax2.grid(True, axis="y", alpha=0.25)
+
+    plt.tight_layout()
+    plt.savefig(out_path, dpi=140, bbox_inches="tight")
+    plt.close()
+    print(f"Wrote {out_path}", flush=True)
+
+
 def main():
-    out_dir = Path(__file__).parent / "test_data" / "BACKTEST_RESULTS"
+    root = Path(__file__).parent
+    out_dir = root / "test_data" / "BACKTEST_RESULTS"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # Daily
-    daily_results = run_dataset(TEST_DATA_DIR, "Daily (10yr)", "~10yr daily bars (2016 to 2026) from Yahoo Finance")
+    daily_results, daily_curves = run_dataset(TEST_DATA_DIR, "Daily (10yr)", "~10yr daily bars (2016 to 2026) from Yahoo Finance")
     daily_md = generate_markdown(daily_results, "Daily (10yr)", "~10yr daily bars (2016 to 2026) from Yahoo Finance", len(daily_results))
     (out_dir / "DAILY.md").write_text(daily_md)
     print(f"\nWrote {out_dir / 'DAILY.md'}", flush=True)
 
+    # README charts — generated from the same daily run for consistency
+    save_cross_asset_chart(daily_results, root / "cross_asset_results.png")
+    if daily_curves:
+        save_single_asset_chart(daily_curves, root / "backtest_results.png")
+
     # Hourly
-    hourly_results = run_dataset(HOURLY_DATA_DIR, "Hourly (2yr)", "~2yr hourly bars (2024 to 2026) from Yahoo Finance")
+    hourly_results, _ = run_dataset(HOURLY_DATA_DIR, "Hourly (2yr)", "~2yr hourly bars (2024 to 2026) from Yahoo Finance")
     hourly_md = generate_markdown(hourly_results, "Hourly (2yr)", "~2yr hourly bars (2024 to 2026) from Yahoo Finance", len(hourly_results))
     (out_dir / "HOURLY.md").write_text(hourly_md)
     print(f"\nWrote {out_dir / 'HOURLY.md'}", flush=True)
