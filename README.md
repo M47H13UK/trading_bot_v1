@@ -1,8 +1,8 @@
 # Adaptive Regime-Based Trading Bot
 
-**🏆 1st place: Lancaster University Quant Hackathon (LEFS × FemTech, Feb 2026)**
+1st place at the Lancaster University Quant Hackathon, LEFS × FemTech, February 2026.
 
-A long-only trading-strategy research project built around one idea, *shave the peaks instead of avoiding crashes*, taken from hand-written rules to an XGBoost / Random-Forest ensemble and a competition-winning submission. Backtested across **41 assets** and **~10 years** of market data under one unified backtester with continuous 0-100% position sizing.
+A long-only trading-strategy research project built around one idea, *shave the peaks instead of avoiding crashes*, taken from hand-written rules to an XGBoost / Random-Forest ensemble and a hackathon submission. Backtested across **41 assets** and **~10 years** of market data under one unified backtester with continuous 0-100% position sizing.
 
 > **The one idea.** Without leverage you can't beat Buy & Hold by sitting in cash. Every day out of the market is compounding drag. So instead of *avoiding crashes*, **shave the peaks**: stay ~100% invested by default and trim only at statistically stretched, overbought extremes that tend to mean-revert.
 
@@ -24,7 +24,7 @@ A long-only trading-strategy research project built around one idea, *shave the 
 | **ML v3 Return Maximizer** | XGB + RF | 26/41 (63%) | **30/41 (73%)** | **+268%** |
 | Buy & Hold | n/a | n/a | n/a | +183% |
 
-Two complementary winners: **Peak Shaver v2 is the most _consistent_** (beats Buy & Hold 78% of the time on daily data), while **ML v3 is the highest _returning_** (best median return, and the single best strategy on 25 of 41 assets). Full per-asset breakdown: [`DAILY.md`](test_data/BACKTEST_RESULTS/DAILY.md) · [`HOURLY.md`](test_data/BACKTEST_RESULTS/HOURLY.md).
+**Peak Shaver v2 has the highest daily beat rate**, beating Buy & Hold on 78% of the tested assets. **ML v3 has the highest median return** and leads on 25 of 41 assets. Full per-asset breakdown: [`DAILY.md`](test_data/BACKTEST_RESULTS/DAILY.md) · [`HOURLY.md`](test_data/BACKTEST_RESULTS/HOURLY.md).
 
 ---
 
@@ -77,27 +77,32 @@ pip install -r requirements.txt
 ```
 
 **Interactive CLI.** Run any strategy on any asset:
+
 ```bash
 python trading_bot.py
 ```
 
-**Streamlit terminal dashboard.** Bloomberg/TradingView-style demo:
+**Streamlit dashboard.**
+
 ```bash
 streamlit run dashboard.py
 ```
 
 **Browser visualizer.** Scrub through the strategy bar-by-bar (serve from the repo root; opening the file directly won't load the data):
+
 ```bash
 python -m http.server 8000
 # then open http://localhost:8000/viz/index.html
 ```
 
 **Reproduce all results + the charts above** (trains the ML models, ~3-5 min):
+
 ```bash
 python run_full_backtest.py     # writes test_data/BACKTEST_RESULTS/{DAILY,HOURLY}.md + both PNGs
 ```
 
 **Run the hackathon evaluation:**
+
 ```bash
 cd hackathon_repo && python test.py
 ```
@@ -106,7 +111,7 @@ cd hackathon_repo && python test.py
 
 ## Project structure
 
-```
+```text
 trading_bot.py              # Core: indicators, Peak Shaver v1/v2, Hackathon Sharpe, backtester, CLI
 ml_peak_shaver_v2.py        # ML strategy v2: XGB + RF, multi-horizon labels
 ml_peak_shaver_v3.py        # ML strategy v3: every-bar return prediction
